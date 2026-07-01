@@ -1,49 +1,97 @@
 # Mondial 2026 — Arbre circulaire (live)
 
-Arbre à élimination directe de la Coupe du Monde 2026, disposé en cercle,
-mis à jour automatiquement toutes les 5 minutes via GitHub Actions.
+Arbre à élimination directe de la Coupe du Monde 2026, disposé en cercle.
 
-## Comment ça marche
+Le front reste 100 % statique sur **GitHub Pages**, mais la source de données
+peut maintenant être déplacée vers un **Cloudflare Worker** gratuit, plus fiable
+qu'un cron GitHub Actions pour du 5 minutes.
+
+## Architecture recommandée
 
 ```
-football-data.org  --(toutes les 5 min, côté serveur)-->  scripts/fetch-data.js
-                                                                   |
-                                                                   v
-                                                          data/bracket.json  (commité dans le repo)
-                                                                   |
-                                                                   v
-                                                    index.html (GitHub Pages) le lit en same-origin
+football-data.org  --(toutes les 5 min, Cloudflare Cron)-->  cloudflare/worker.mjs
+                                                                      |
+                                                                      v
+                                                             Cloudflare KV
+                                                                      |
+                                                                      v
+                                         /bracket.json sur workers.dev (CORS autorisé)
+                                                                      |
+                                                                      v
+                                   index.html (GitHub Pages) le lit via /config.js
 ```
 
-La clé API ne touche jamais le navigateur : elle vit uniquement dans les secrets
-GitHub Actions. Le front-end ne fait qu'un `fetch('./data/bracket.json')` sur
-son propre domaine, donc aucun souci de CORS ni de quota côté client.
+Le repo contient désormais :
 
-## Mise en place (une seule fois, ~5 min)
+- `/home/runner/work/world-cup/world-cup/cloudflare/worker.mjs` — le Worker qui
+  fetch l'API, garde le dernier JSON en KV et expose `/bracket.json`
+- `/home/runner/work/world-cup/world-cup/cloudflare/wrangler.example.jsonc` —
+  un exemple de configuration Wrangler
+- `/home/runner/work/world-cup/world-cup/config.js` — la config front pour
+  choisir la source de données
 
-1. **Crée le repo** `world-cup` sur ton compte GitHub et pousse ce dossier tel quel.
+## Migration Cloudflare (gratuite)
 
-2. **Ajoute ta clé API en secret** :
-   Settings → Secrets and variables → Actions → New repository secret
-   - Nom : `FOOTBALL_DATA_API_KEY`
-   - Valeur : ta clé football-data.org
+1. **Crée un Worker Cloudflare**
+   - Dashboard → Workers & Pages → Create → Create Worker
+   - Donne-lui un nom du style `world-cup-data`
 
-3. **Active GitHub Pages** :
-   Settings → Pages → Source : `Deploy from a branch` → Branch : `main` / `root`
+2. **Crée un namespace KV**
+   - Dashboard → Storage & Databases → KV
+   - Crée par exemple `WORLD_CUP_DATA`
 
-4. **Lance le premier import manuellement** (pas besoin d'attendre 5 min) :
-   Onglet Actions → "Update World Cup bracket data" → Run workflow
+3. **Ajoute les bindings et secrets au Worker**
+   - Binding KV :
+     - Nom : `BRACKET_KV`
+     - Namespace : ton `WORLD_CUP_DATA`
+   - Secret :
+     - Nom : `FOOTBALL_DATA_API_KEY`
+     - Valeur : ta clé football-data.org
 
-5. Va sur `https://TON-PSEUDO.github.io/world-cup/` — l'arbre se remplit et se
-   met à jour tout seul toutes les 5 minutes, à chaque fois que tu reviens.
+4. **Ajoute les variables recommandées**
+   - `ALLOWED_ORIGIN=https://TON-PSEUDO.github.io`
+   - `BRACKET_KV_KEY=bracket.json`
+   - Laisse `COMPETITION=WC` et `API_BASE=https://api.football-data.org/v4`
+     si tu utilises le fichier d'exemple
+
+5. **Configure le cron**
+   - Trigger cron : `*/5 * * * *`
+
+6. **Déploie le code du Worker**
+   - Soit en copiant le contenu de `cloudflare/worker.mjs` dans l'éditeur du
+     dashboard
+   - Soit avec Wrangler en partant de `cloudflare/wrangler.example.jsonc`
+
+7. **Pointe le front vers le Worker**
+   - Édite `/home/runner/work/world-cup/world-cup/config.js`
+   - Remplace `dataUrl` par ton endpoint public, par exemple :
+
+   ```js
+   dataUrl: "https://world-cup-data.<ton-compte>.workers.dev/bracket.json"
+   ```
+
+8. **Active GitHub Pages**
+   - Settings → Pages → Source : `Deploy from a branch` → Branch : `main` / `root`
+
+9. **Teste**
+   - Ouvre `https://TON-PSEUDO.github.io/world-cup/`
+   - Le Worker peut remplir KV au premier appel HTTP si le cache est vide
+   - Le endpoint `https://...workers.dev/healthz` permet de vérifier rapidement
+     si une version du JSON est déjà stockée
+
+## Fallback GitHub Actions
+
+Le workflow `/home/runner/work/world-cup/world-cup/.github/workflows/update-data.yml`
+est conservé pour l'instant comme solution de secours. Tant que `config.js`
+pointe encore vers `./data/bracket.json`, le site continue à fonctionner comme
+avant.
 
 ## Notes
 
-- GitHub peut retarder légèrement les cron `schedule` en cas de forte charge sur
-  la plateforme — ce n'est pas garanti à la seconde près, mais reste largement
-  suffisant pour un score de foot.
-- Si un repo est inactif pendant 60 jours, GitHub désactive automatiquement les
-  workflows programmés ; un simple push ou un `Run workflow` manuel les
-  réactive.
+- Le Worker renvoie la même structure JSON que l'ancien fichier
+  `data/bracket.json`, donc le front n'a pas besoin de changer de format.
+- Le service worker du front laisse maintenant les requêtes cross-origin
+  (notamment vers `workers.dev`) passer directement au réseau pour éviter de
+  geler une vieille réponse dans le cache local.
 - Le script ignore volontairement les rounds qui ne sont pas une puissance de 2
   (matchs) et exclut la petite finale — seuls 32es → Finale sont affichés.

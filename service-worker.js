@@ -2,9 +2,10 @@
 // always prefers the network when it's available — so pushing a new
 // index.html actually reaches returning visitors instead of them being stuck
 // on whatever was cached the first time they opened the site.
-const CACHE_NAME = "mondial2026-shell-v2";
+const CACHE_NAME = "mondial2026-shell-v3";
 const SHELL_FILES = [
   "./",
+  "./config.js",
   "./index.html",
   "./manifest.json",
   "./icons/icon-192.png",
@@ -29,6 +30,11 @@ self.addEventListener("activate", (event) => {
 
 self.addEventListener("fetch", (event) => {
   const url = new URL(event.request.url);
+
+  if (url.origin !== self.location.origin) {
+    event.respondWith(fetch(event.request));
+    return;
+  }
 
   // Live data: always go to the network, never serve a cached/stale bracket.
   if (url.pathname.endsWith("data/bracket.json")) {

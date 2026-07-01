@@ -397,7 +397,7 @@
     <div class="empty-overlay" id="emptyOverlay">
       <div class="empty-card">
         <h2 id="emptyTitle">En attente de la première synchronisation</h2>
-        <p id="emptyText">Le robot GitHub Actions n'a pas encore alimenté <code>data/bracket.json</code>. Lance-le une fois manuellement depuis l'onglet Actions du repo (bouton « Run workflow »), ou attends jusqu'à 5 minutes après le premier push.</p>
+        <p id="emptyText">La source de données configurée n'a pas encore publié le tableau. Si tu viens de configurer Cloudflare, attends le premier passage du cron ou recharge la page dans quelques minutes.</p>
         <button id="retryBtn">Réessayer</button>
       </div>
     </div>
@@ -425,12 +425,16 @@
 
 <div id="tooltip"></div>
 
+<script src="./config.js"></script>
 <script>
 (function(){
 
   /* ============ CONFIG ============ */
-  const DATA_URL = "./data/bracket.json";
-  const AUTO_REFRESH_MS = 60000; // re-read the (tiny, same-origin) JSON file every minute
+  const APP_CONFIG = window.WC2026_CONFIG || {};
+  const DATA_URL = APP_CONFIG.dataUrl || "./data/bracket.json";
+  const RESOLVED_DATA_URL = resolveDataUrl(DATA_URL);
+  const DATA_URL_DISPLAY = escapeHtml(RESOLVED_DATA_URL ? RESOLVED_DATA_URL.href : DATA_URL);
+  const AUTO_REFRESH_MS = 60000; // re-read the tiny JSON endpoint every minute
 
   const ROUND_COLORS = ["--r1","--r2","--r3","--r4","--r5"];
 
@@ -447,9 +451,9 @@
       iosInstall:"Pour installer : appuie sur le bouton Partager de Safari (le carré avec une flèche), puis « Sur l'écran d'accueil ».",
       androidInstall:"Pour installer : ouvre le menu de ton navigateur (⋮) puis choisis « Ajouter à l'écran d'accueil » ou « Installer l'application ».",
       emptyWaitTitle:"En attente de la première synchronisation",
-      emptyWaitText:"Le robot GitHub Actions n'a pas encore alimenté <code>data/bracket.json</code>. Lance-le une fois manuellement depuis l'onglet Actions du repo (bouton « Run workflow »), ou attends jusqu'à 5 minutes après le premier push.",
+      emptyWaitText:"La source de données configurée (<code>{{dataUrl}}</code>) n'a pas encore publié le tableau. Si tu viens de configurer Cloudflare, attends le premier passage du cron ou recharge la page dans quelques minutes.",
       emptyErrTitle:"Impossible de récupérer les données",
-      emptyErrText:"La requête vers <code>data/bracket.json</code> a échoué (réseau, fichier manquant, ou cache). Si le fichier existe bien sur GitHub avec du contenu, essaie de recharger la page en navigation privée pour écarter un souci de cache.",
+      emptyErrText:"La requête vers <code>{{dataUrl}}</code> a échoué (réseau, CORS, source absente ou cache). Vérifie que le Worker répond bien et autorise ton domaine GitHub Pages.",
       retry:"Réessayer", finale:"FINALE", today:"Aujourd'hui !", kickoff:"⏱ Coup d'envoi…", live:"🔴 En direct", tbd:"À déterminer",
       topScorers:"Meilleurs buteurs", topAssists:"Meilleures passes décisives", bestTeams:"Meilleures équipes",
       recentMatches:"Derniers matchs", goals:"Buts", assistsShort:"Passes", played:"J", wins:"V", draws:"N", losses:"D", diff:"Diff",
@@ -467,9 +471,9 @@
       iosInstall:"To install: tap Safari's Share button (the square with an arrow), then \"Add to Home Screen\".",
       androidInstall:"To install: open your browser's menu (⋮) then choose \"Add to Home screen\" or \"Install app\".",
       emptyWaitTitle:"Waiting for the first sync",
-      emptyWaitText:"The GitHub Actions bot hasn't filled <code>data/bracket.json</code> yet. Trigger it manually from the repo's Actions tab (\"Run workflow\"), or wait up to 5 minutes after the first push.",
+      emptyWaitText:"The configured data source (<code>{{dataUrl}}</code>) hasn't published the bracket yet. If you just set up Cloudflare, wait for the first cron run or reload the page in a few minutes.",
       emptyErrTitle:"Couldn't fetch the data",
-      emptyErrText:"The request to <code>data/bracket.json</code> failed (network, missing file, or cache). If the file exists on GitHub with real content, try reloading in a private window to rule out caching.",
+      emptyErrText:"The request to <code>{{dataUrl}}</code> failed (network, CORS, missing source, or cache). Check that the Worker responds correctly and allows your GitHub Pages origin.",
       retry:"Retry", finale:"FINAL", today:"Today!", kickoff:"⏱ Kicking off…", live:"🔴 Live", tbd:"TBD",
       topScorers:"Top scorers", topAssists:"Top assists", bestTeams:"Best teams",
       recentMatches:"Recent matches", goals:"Goals", assistsShort:"Assists", played:"P", wins:"W", draws:"D", losses:"L", diff:"Diff",
@@ -487,9 +491,9 @@
       iosInstall:"Para instalar: toca el botón Compartir de Safari (el cuadrado con una flecha) y luego «Añadir a pantalla de inicio».",
       androidInstall:"Para instalar: abre el menú de tu navegador (⋮) y elige «Añadir a pantalla de inicio» o «Instalar aplicación».",
       emptyWaitTitle:"Esperando la primera sincronización",
-      emptyWaitText:"El robot de GitHub Actions aún no ha completado <code>data/bracket.json</code>. Ejecútalo manualmente desde la pestaña Actions del repo («Run workflow»), o espera hasta 5 minutos tras el primer push.",
+      emptyWaitText:"La fuente de datos configurada (<code>{{dataUrl}}</code>) aún no ha publicado el cuadro. Si acabas de configurar Cloudflare, espera la primera ejecución del cron o recarga la página en unos minutos.",
       emptyErrTitle:"No se pudieron obtener los datos",
-      emptyErrText:"La solicitud a <code>data/bracket.json</code> falló (red, archivo ausente o caché). Si el archivo existe en GitHub con contenido real, prueba a recargar en una ventana privada para descartar un problema de caché.",
+      emptyErrText:"La solicitud a <code>{{dataUrl}}</code> falló (red, CORS, origen ausente o caché). Verifica que el Worker responda bien y autorice tu dominio de GitHub Pages.",
       retry:"Reintentar", finale:"FINAL", today:"¡Hoy!", kickoff:"⏱ Empieza pronto…", live:"🔴 En vivo", tbd:"Por determinar",
       topScorers:"Máximos goleadores", topAssists:"Máximas asistencias", bestTeams:"Mejores equipos",
       recentMatches:"Últimos partidos", goals:"Goles", assistsShort:"Asist.", played:"J", wins:"G", draws:"E", losses:"P", diff:"Dif",
@@ -499,6 +503,24 @@
   };
   let lang = localStorage.getItem("wc2026-lang") || "fr";
   function t(key){ return (I18N[lang] && I18N[lang][key]) || I18N.fr[key] || key; }
+  function escapeHtml(value){
+    return String(value)
+      .replaceAll("&", "&amp;")
+      .replaceAll("<", "&lt;")
+      .replaceAll(">", "&gt;")
+      .replaceAll('"', "&quot;")
+      .replaceAll("'", "&#39;");
+  }
+  function resolveDataUrl(value){
+    try{
+      return new URL(value, window.location.href);
+    }catch(err){
+      return null;
+    }
+  }
+  function withDataUrl(html){
+    return html.replaceAll("{{dataUrl}}", DATA_URL_DISPLAY);
+  }
 
   // FIFA code -> flagcdn.com country code (some UK nations use flagcdn's
   // subdivision flags). Covers the 48 qualified nations, with a few common
@@ -982,13 +1004,16 @@
 
   async function loadData(){
     try{
-      const res = await fetch(DATA_URL + "?t=" + Date.now(), { cache: "no-store" });
+      const requestUrl = resolveDataUrl(DATA_URL);
+      if(!requestUrl) throw new Error("Invalid DATA_URL: " + DATA_URL);
+      requestUrl.searchParams.set("t", Date.now().toString());
+      const res = await fetch(requestUrl.toString(), { cache: "no-store" });
       if(!res.ok) throw new Error("HTTP " + res.status);
       const data = await res.json();
       rounds = data.rounds || [];
       const shouldAnimate = !hasPlayedEntrance && rounds.length > 0;
       if(!rounds.length){
-        setEmptyMessage(t("emptyWaitTitle"), t("emptyWaitText"));
+        setEmptyMessage(t("emptyWaitTitle"), withDataUrl(t("emptyWaitText")));
       }
       render(shouldAnimate);
       if(shouldAnimate) hasPlayedEntrance = true;
@@ -997,7 +1022,7 @@
     }catch(err){
       console.error(err);
       if(!rounds.length){
-        setEmptyMessage(t("emptyErrTitle"), t("emptyErrText"));
+        setEmptyMessage(t("emptyErrTitle"), withDataUrl(t("emptyErrText")));
         emptyOverlay.style.display = "flex";
       }
     }
@@ -1357,7 +1382,7 @@
     if(!rounds.length){
       // Only refresh the empty-state copy if it's currently showing the
       // generic "waiting" message (don't clobber an active error message).
-      setEmptyMessage(t("emptyWaitTitle"), t("emptyWaitText"));
+      setEmptyMessage(t("emptyWaitTitle"), withDataUrl(t("emptyWaitText")));
     }
   }
   function setLang(newLang){
