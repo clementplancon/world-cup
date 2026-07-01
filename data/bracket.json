@@ -1,5 +1,5 @@
 {
-  "updated": "2026-07-01T17:52:03.880Z",
+  "updated": "2026-07-01T18:33:10.637Z",
   "rounds": [
     [
       {
@@ -216,12 +216,12 @@
           "name": "Congo DR"
         },
         "score": {
-          "home": 1,
+          "home": 2,
           "away": 1
         },
         "penalties": null,
-        "status": "live",
-        "winner": null,
+        "status": "final",
+        "winner": "home",
         "date": "2026-07-01T16:00:00Z"
       },
       {
