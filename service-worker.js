@@ -1,7 +1,8 @@
-// Minimal service worker: caches the app shell so the page still opens
-// (with a possibly-stale bracket) when offline, but data/bracket.json is
-// always fetched fresh from the network since it changes every few minutes.
-const CACHE_NAME = "mondial2026-shell-v1";
+// Minimal service worker: keeps a copy of the app shell for offline use, but
+// always prefers the network when it's available — so pushing a new
+// index.html actually reaches returning visitors instead of them being stuck
+// on whatever was cached the first time they opened the site.
+const CACHE_NAME = "mondial2026-shell-v2";
 const SHELL_FILES = [
   "./",
   "./index.html",
@@ -35,8 +36,15 @@ self.addEventListener("fetch", (event) => {
     return;
   }
 
-  // App shell: cache-first, falling back to network.
+  // App shell: network-first. Try the network so updates show up immediately;
+  // only fall back to the cached copy if the network request fails (offline).
   event.respondWith(
-    caches.match(event.request).then((cached) => cached || fetch(event.request))
+    fetch(event.request)
+      .then((res) => {
+        const copy = res.clone();
+        caches.open(CACHE_NAME).then((cache) => cache.put(event.request, copy)).catch(() => {});
+        return res;
+      })
+      .catch(() => caches.match(event.request))
   );
 });
