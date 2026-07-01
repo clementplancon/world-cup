@@ -368,7 +368,7 @@
 
 <header>
   <div class="title-block">
-    <h1>Mondial 2026 <span>· Phases finales</span></h1>
+    <h1><span id="headerTitleText">Mondial 2026</span> <span id="headerSubtitleText">· Phases finales</span></h1>
     <p id="subtitleText">Arbre circulaire — des 32<sup>es</sup> de finale à la Finale</p>
   </div>
   <button id="langBtn" title="Language / Langue / Idioma">FR</button>
@@ -437,6 +437,7 @@
   /* ============ i18n ============ */
   const I18N = {
     fr: {
+      headerTitle:"Mondial 2026", headerSubtitle:"· Phases finales",
       subtitle: "Arbre circulaire — des 32<sup>es</sup> de finale à la Finale",
       round32:"32es de finale", round16:"8es de finale", roundQF:"Quarts de finale", roundSF:"Demi-finales", roundF:"Finale",
       statusFinal:"Terminé", statusLive:"En direct", eliminated:"Éliminé",
@@ -456,6 +457,7 @@
       dIn:"dans", jShort:"j", hShort:"h", minShort:"min",
     },
     en: {
+      headerTitle:"2026 World Cup", headerSubtitle:"· Knockout stage",
       subtitle: "Circular bracket — from the Round of 32 to the Final",
       round32:"Round of 32", round16:"Round of 16", roundQF:"Quarter-finals", roundSF:"Semi-finals", roundF:"Final",
       statusFinal:"Finished", statusLive:"Live", eliminated:"Eliminated",
@@ -475,6 +477,7 @@
       dIn:"in", jShort:"d", hShort:"h", minShort:"m",
     },
     es: {
+      headerTitle:"Mundial 2026", headerSubtitle:"· Fase final",
       subtitle: "Cuadro circular — de los dieciseisavos a la Final",
       round32:"Dieciseisavos", round16:"Octavos de final", roundQF:"Cuartos de final", roundSF:"Semifinales", roundF:"Final",
       statusFinal:"Finalizado", statusLive:"En vivo", eliminated:"Eliminado",
@@ -943,8 +946,8 @@
     return t("tbd");
   }
   function showTooltip(e, m){
-    const homeName = m.home && m.home.name ? m.home.name : "À déterminer";
-    const awayName = m.away && m.away.name ? m.away.name : "À déterminer";
+    const homeName = m.home && m.home.name ? m.home.name : t("tbd");
+    const awayName = m.away && m.away.name ? m.away.name : t("tbd");
     let scoreLine = "";
     if(m.score && m.score.home!=null){
       const hp = m.penalties && m.penalties.home!=null ? ` (${m.penalties.home})` : "";
@@ -1335,6 +1338,8 @@
   const LANG_ORDER = ["fr", "en", "es"];
   function applyStaticTranslations(){
     document.getElementById("langBtn").textContent = lang.toUpperCase();
+    document.getElementById("headerTitleText").textContent = t("headerTitle");
+    document.getElementById("headerSubtitleText").textContent = t("headerSubtitle");
     document.getElementById("subtitleText").innerHTML = t("subtitle");
     document.getElementById("zoomHint").textContent = t("zoomHint");
     document.getElementById("installBtnLabel").textContent = t("installBtn");
