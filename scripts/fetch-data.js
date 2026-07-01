@@ -13,11 +13,13 @@ function mapStatus(apiStatus) {
   return "scheduled";
 }
 
-// Groups matches by stage, keeps only knockout rounds (power-of-two match counts),
-// orders rounds from biggest (32es) to smallest (Finale), and orders matches
-// within each round by kickoff time — this order defines the bracket's left-to-right
-// positions used by the radial renderer on the front-end.
-function buildRounds(matches) {
+function teamKey(t) {
+  return t ? String(t.id || t.tla || t.name || t.shortName) : null;
+}
+
+// Groups raw matches by stage and keeps only knockout rounds (power-of-two
+// match counts), ordered from biggest (32es) to smallest (Finale).
+function groupByStage(matches) {
   const groups = {};
   matches.forEach((mt) => {
     const stage = mt.stage || "UNKNOWN";
@@ -27,34 +29,72 @@ function buildRounds(matches) {
     if (!groups[stage]) groups[stage] = [];
     groups[stage].push(mt);
   });
-
   let groupArr = Object.entries(groups).map(([stage, ms]) => ({ stage, matches: ms }));
   groupArr = groupArr.filter((g) => g.matches.length >= 1 && (g.matches.length & (g.matches.length - 1)) === 0);
   groupArr.sort((a, b) => b.matches.length - a.matches.length);
+  return groupArr.map((g) => g.matches);
+}
 
-  return groupArr.map((g) => {
-    const sorted = g.matches.slice().sort((a, b) => new Date(a.utcDate) - new Date(b.utcDate));
-    return sorted.map((mt) => {
-      const status = mapStatus(mt.status);
-      let winner = null;
-      if (status === "final") {
-        if (mt.score.winner === "HOME_TEAM") winner = "home";
-        else if (mt.score.winner === "AWAY_TEAM") winner = "away";
-      }
-      return {
-        home: mt.homeTeam
-          ? { code: mt.homeTeam.tla || (mt.homeTeam.shortName || "").slice(0, 3).toUpperCase(), name: mt.homeTeam.shortName || mt.homeTeam.name }
-          : null,
-        away: mt.awayTeam
-          ? { code: mt.awayTeam.tla || (mt.awayTeam.shortName || "").slice(0, 3).toUpperCase(), name: mt.awayTeam.shortName || mt.awayTeam.name }
-          : null,
-        score: { home: mt.score.fullTime.home, away: mt.score.fullTime.away },
-        status,
-        winner,
-        date: mt.utcDate,
-      };
-    });
-  });
+// Orders each round's matches left-to-right so the bracket tree connects
+// correctly, by walking backward from the Final: a match's home/away team
+// tells us exactly which earlier-round match produced it. Any match whose
+// team isn't resolvable yet (future round, teams still TBD) falls back to
+// chronological order so the layout stays stable until it's known.
+function orderRounds(roundsRaw) {
+  const n = roundsRaw.length;
+  if (n === 0) return [];
+  const ordered = new Array(n);
+  ordered[n - 1] = [roundsRaw[n - 1][0]]; // Final: single match, trivially ordered
+
+  for (let k = n - 2; k >= 0; k--) {
+    const parent = ordered[k + 1];
+    const pool = roundsRaw[k].slice();
+
+    function takeMatchWithTeam(teamRef) {
+      if (!teamRef) return null;
+      const key = teamKey(teamRef);
+      const idx = pool.findIndex((m) => teamKey(m.homeTeam) === key || teamKey(m.awayTeam) === key);
+      return idx >= 0 ? pool.splice(idx, 1)[0] : null;
+    }
+
+    const pairs = parent.map((p) => [takeMatchWithTeam(p.homeTeam), takeMatchWithTeam(p.awayTeam)]);
+
+    pool.sort((a, b) => new Date(a.utcDate) - new Date(b.utcDate));
+    let poolIdx = 0;
+    const finalOrder = [];
+    for (const [left, right] of pairs) {
+      finalOrder.push(left || pool[poolIdx++] || null);
+      finalOrder.push(right || pool[poolIdx++] || null);
+    }
+    const cleaned = finalOrder.filter(Boolean);
+    ordered[k] = cleaned.length === roundsRaw[k].length
+      ? cleaned
+      : roundsRaw[k].slice().sort((a, b) => new Date(a.utcDate) - new Date(b.utcDate)); // safety net
+  }
+
+  return ordered;
+}
+
+function toMatchObject(mt) {
+  const status = mapStatus(mt.status);
+  let winner = null;
+  if (status === "final") {
+    if (mt.score.winner === "HOME_TEAM") winner = "home";
+    else if (mt.score.winner === "AWAY_TEAM") winner = "away";
+  }
+  return {
+    home: mt.homeTeam
+      ? { code: mt.homeTeam.tla || (mt.homeTeam.shortName || "").slice(0, 3).toUpperCase(), name: mt.homeTeam.shortName || mt.homeTeam.name }
+      : null,
+    away: mt.awayTeam
+      ? { code: mt.awayTeam.tla || (mt.awayTeam.shortName || "").slice(0, 3).toUpperCase(), name: mt.awayTeam.shortName || mt.awayTeam.name }
+      : null,
+    score: { home: mt.score.fullTime.home, away: mt.score.fullTime.away },
+    penalties: mt.score.penalties && mt.score.penalties.home != null ? mt.score.penalties : null,
+    status,
+    winner,
+    date: mt.utcDate,
+  };
 }
 
 async function main() {
@@ -78,7 +118,9 @@ async function main() {
   }
 
   const data = await res.json();
-  const rounds = buildRounds(data.matches || []);
+  const roundsRaw = groupByStage(data.matches || []);
+  const roundsOrdered = orderRounds(roundsRaw);
+  const rounds = roundsOrdered.map((r) => r.map(toMatchObject));
   const output = { updated: new Date().toISOString(), rounds };
 
   fs.mkdirSync(path.dirname(OUTPUT_PATH), { recursive: true });
