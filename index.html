@@ -62,6 +62,10 @@
     z-index:20;
     padding:18px 20px;
     pointer-events:none;
+    display:flex;
+    justify-content:space-between;
+    align-items:flex-start;
+    gap:12px;
   }
   .title-block h1{
     margin:0;
@@ -79,6 +83,20 @@
     letter-spacing:.02em;
     text-shadow:0 1px 3px rgba(0,0,0,.7), 0 0 16px rgba(0,0,0,.5);
   }
+  #langBtn{
+    pointer-events:auto;
+    background:var(--panel);
+    border:1px solid var(--line);
+    color:var(--text);
+    font-size:11px;
+    font-weight:700;
+    letter-spacing:.04em;
+    padding:6px 10px;
+    border-radius:100px;
+    cursor:pointer;
+    flex:none;
+  }
+  #langBtn:active{ border-color:var(--gold); }
 
   /* ---------- Bracket wrap (full-viewport canvas) ---------- */
   main{
@@ -225,7 +243,15 @@
     fill:none;
   }
 
-  .center-badge{ pointer-events:none; }
+  .center-badge{ pointer-events:auto; }
+  @keyframes eggPop{
+    0%{ transform:scale(1); }
+    30%{ transform:scale(1.25) rotate(-6deg); }
+    60%{ transform:scale(0.95) rotate(4deg); }
+    100%{ transform:scale(1) rotate(0); }
+  }
+  .center-badge.egg-pop{ animation: eggPop .5s ease-out; transform-origin:center; }
+  .center-badge.egg-pop circle{ stroke:var(--live); }
   .center-badge circle{ fill:var(--panel); stroke:var(--gold); stroke-width:1.5; }
   .center-badge text{ fill:var(--gold); font-weight:800; }
 
@@ -343,8 +369,9 @@
 <header>
   <div class="title-block">
     <h1>Mondial 2026 <span>· Phases finales</span></h1>
-    <p>Arbre circulaire — des 32<sup>es</sup> de finale à la Finale</p>
+    <p id="subtitleText">Arbre circulaire — des 32<sup>es</sup> de finale à la Finale</p>
   </div>
+  <button id="langBtn" title="Language / Langue / Idioma">FR</button>
 </header>
 
 <main>
@@ -360,11 +387,15 @@
     <div class="action-stack">
       <button class="icon-fab" id="installBtn" title="Installer l'application">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="2" width="14" height="20" rx="2"></rect><line x1="12" y1="18" x2="12.01" y2="18"></line></svg>
-        <span>Installer l'application</span>
+        <span id="installBtnLabel">Installer l'application</span>
+      </button>
+      <button class="icon-fab" id="statsBtn" title="Statistiques">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="20" x2="18" y2="10"></line><line x1="12" y1="20" x2="12" y2="4"></line><line x1="6" y1="20" x2="6" y2="14"></line></svg>
+        <span id="statsBtnLabel">Statistiques</span>
       </button>
       <button class="icon-fab" id="exportBtn" title="Télécharger l'image">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
-        <span>Télécharger l'image</span>
+        <span id="exportBtnLabel">Télécharger l'image</span>
       </button>
     </div>
     <div class="empty-overlay" id="emptyOverlay">
@@ -406,6 +437,66 @@
   const AUTO_REFRESH_MS = 60000; // re-read the (tiny, same-origin) JSON file every minute
 
   const ROUND_COLORS = ["--r1","--r2","--r3","--r4","--r5"];
+
+  /* ============ i18n ============ */
+  const I18N = {
+    fr: {
+      subtitle: "Arbre circulaire — des 32<sup>es</sup> de finale à la Finale",
+      round32:"32es de finale", round16:"8es de finale", roundQF:"Quarts de finale", roundSF:"Demi-finales", roundF:"Finale",
+      statusFinal:"Terminé", statusLive:"En direct", eliminated:"Éliminé",
+      following:"Suivi : ",
+      zoomHint:"Pince ou molette pour zoomer",
+      installBtn:"Installer l'application", exportBtn:"Télécharger l'image",
+      iosInstall:"Pour installer : appuie sur le bouton Partager de Safari (le carré avec une flèche), puis « Sur l'écran d'accueil ».",
+      emptyWaitTitle:"En attente de la première synchronisation",
+      emptyWaitText:"Le robot GitHub Actions n'a pas encore alimenté <code>data/bracket.json</code>. Lance-le une fois manuellement depuis l'onglet Actions du repo (bouton « Run workflow »), ou attends jusqu'à 5 minutes après le premier push.",
+      emptyErrTitle:"Impossible de récupérer les données",
+      emptyErrText:"La requête vers <code>data/bracket.json</code> a échoué (réseau, fichier manquant, ou cache). Si le fichier existe bien sur GitHub avec du contenu, essaie de recharger la page en navigation privée pour écarter un souci de cache.",
+      retry:"Réessayer", finale:"FINALE", today:"Aujourd'hui !", kickoff:"⏱ Coup d'envoi…", live:"🔴 En direct", tbd:"À déterminer",
+      statsBtn:"Statistiques", topScorers:"Meilleurs buteurs", topAssists:"Meilleures passes décisives", bestTeams:"Meilleures équipes",
+      recentMatches:"Derniers matchs", goals:"Buts", assistsShort:"Passes", played:"J", wins:"V", draws:"N", losses:"D", diff:"Diff",
+      close:"Fermer", noStats:"Statistiques pas encore disponibles.", statsUpdated:"Mis à jour",
+      dIn:"dans", jShort:"j", hShort:"h", minShort:"min",
+    },
+    en: {
+      subtitle: "Circular bracket — from the Round of 32 to the Final",
+      round32:"Round of 32", round16:"Round of 16", roundQF:"Quarter-finals", roundSF:"Semi-finals", roundF:"Final",
+      statusFinal:"Finished", statusLive:"Live", eliminated:"Eliminated",
+      following:"Following: ",
+      zoomHint:"Pinch or scroll to zoom",
+      installBtn:"Install app", exportBtn:"Download image",
+      iosInstall:"To install: tap Safari's Share button (the square with an arrow), then \"Add to Home Screen\".",
+      emptyWaitTitle:"Waiting for the first sync",
+      emptyWaitText:"The GitHub Actions bot hasn't filled <code>data/bracket.json</code> yet. Trigger it manually from the repo's Actions tab (\"Run workflow\"), or wait up to 5 minutes after the first push.",
+      emptyErrTitle:"Couldn't fetch the data",
+      emptyErrText:"The request to <code>data/bracket.json</code> failed (network, missing file, or cache). If the file exists on GitHub with real content, try reloading in a private window to rule out caching.",
+      retry:"Retry", finale:"FINAL", today:"Today!", kickoff:"⏱ Kicking off…", live:"🔴 Live", tbd:"TBD",
+      statsBtn:"Stats", topScorers:"Top scorers", topAssists:"Top assists", bestTeams:"Best teams",
+      recentMatches:"Recent matches", goals:"Goals", assistsShort:"Assists", played:"P", wins:"W", draws:"D", losses:"L", diff:"Diff",
+      close:"Close", noStats:"Stats not available yet.", statsUpdated:"Updated",
+      dIn:"in", jShort:"d", hShort:"h", minShort:"m",
+    },
+    es: {
+      subtitle: "Cuadro circular — de los dieciseisavos a la Final",
+      round32:"Dieciseisavos", round16:"Octavos de final", roundQF:"Cuartos de final", roundSF:"Semifinales", roundF:"Final",
+      statusFinal:"Finalizado", statusLive:"En vivo", eliminated:"Eliminado",
+      following:"Siguiendo: ",
+      zoomHint:"Pellizca o usa la rueda para hacer zoom",
+      installBtn:"Instalar la aplicación", exportBtn:"Descargar imagen",
+      iosInstall:"Para instalar: toca el botón Compartir de Safari (el cuadrado con una flecha) y luego «Añadir a pantalla de inicio».",
+      emptyWaitTitle:"Esperando la primera sincronización",
+      emptyWaitText:"El robot de GitHub Actions aún no ha completado <code>data/bracket.json</code>. Ejecútalo manualmente desde la pestaña Actions del repo («Run workflow»), o espera hasta 5 minutos tras el primer push.",
+      emptyErrTitle:"No se pudieron obtener los datos",
+      emptyErrText:"La solicitud a <code>data/bracket.json</code> falló (red, archivo ausente o caché). Si el archivo existe en GitHub con contenido real, prueba a recargar en una ventana privada para descartar un problema de caché.",
+      retry:"Reintentar", finale:"FINAL", today:"¡Hoy!", kickoff:"⏱ Empieza pronto…", live:"🔴 En vivo", tbd:"Por determinar",
+      statsBtn:"Estadísticas", topScorers:"Máximos goleadores", topAssists:"Máximas asistencias", bestTeams:"Mejores equipos",
+      recentMatches:"Últimos partidos", goals:"Goles", assistsShort:"Asist.", played:"J", wins:"G", draws:"E", losses:"P", diff:"Dif",
+      close:"Cerrar", noStats:"Estadísticas aún no disponibles.", statsUpdated:"Actualizado",
+      dIn:"en", jShort:"d", hShort:"h", minShort:"min",
+    },
+  };
+  let lang = localStorage.getItem("wc2026-lang") || "fr";
+  function t(key){ return (I18N[lang] && I18N[lang][key]) || I18N.fr[key] || key; }
 
   // FIFA code -> flagcdn.com country code (some UK nations use flagcdn's
   // subdivision flags). Covers the 48 qualified nations, with a few common
@@ -486,7 +577,7 @@
     const label = document.getElementById("followLabel");
     const url = flagUrl(followedCode);
     if(url){ img.src = url; img.style.display = "block"; } else { img.style.display = "none"; }
-    label.textContent = "Suivi : " + getTeamName(followedCode);
+    label.textContent = t("following") + getTeamName(followedCode);
     chip.style.display = "flex";
   }
   function getTeamName(code){
@@ -544,15 +635,41 @@
     return g;
   }
 
+  /* ============ Trophy easter egg ============ */
+  let trophyClickCount = 0;
+  let trophyClickTimer = null;
+  const TROPHY_MESSAGES = ["⚽ GOOOAL !", "🏆 Presque…", "🎉 Allez !", "🐐 Qui gagnera ?", "🔥 Chaud chaud !"];
+  function setupTrophyEasterEgg(badgeEl){
+    badgeEl.style.cursor = "pointer";
+    badgeEl.addEventListener("click", (e)=>{
+      e.stopPropagation();
+      trophyClickCount++;
+      clearTimeout(trophyClickTimer);
+      trophyClickTimer = setTimeout(()=>{ trophyClickCount = 0; }, 1200);
+      if(trophyClickCount >= 5){
+        trophyClickCount = 0;
+        badgeEl.classList.remove("egg-pop");
+        void badgeEl.offsetWidth;
+        badgeEl.classList.add("egg-pop");
+        const label = badgeEl.querySelector("text");
+        if(label){
+          const original = label.textContent;
+          label.textContent = TROPHY_MESSAGES[Math.floor(Math.random()*TROPHY_MESSAGES.length)];
+          setTimeout(()=>{ label.textContent = original; badgeEl.classList.remove("egg-pop"); }, 1400);
+        }
+      }
+    });
+  }
+
   /* ============ Round labels from match counts ============ */
   function roundLabel(count){
     switch(count){
-      case 16: return "32es de finale";
-      case 8:  return "8es de finale";
-      case 4:  return "Quarts de finale";
-      case 2:  return "Demi-finales";
-      case 1:  return "Finale";
-      default: return count + " matchs";
+      case 16: return t("round32");
+      case 8:  return t("round16");
+      case 4:  return t("roundQF");
+      case 2:  return t("roundSF");
+      case 1:  return t("roundF");
+      default: return count + " " + t("played");
     }
   }
 
@@ -714,7 +831,7 @@
         }
         if(team && team.name){
           leafG.addEventListener("mouseenter", (e)=>{
-            tooltip.innerHTML = `<div class="tt-teams">${team.name}</div>` + (eliminated.has(team.code) ? `<div class="tt-meta">Éliminé</div>` : "");
+            tooltip.innerHTML = `<div class="tt-teams">${team.name}</div>` + (eliminated.has(team.code) ? `<div class="tt-meta">${t("eliminated")}</div>` : "");
             tooltip.classList.add("show");
             moveTooltip(e);
           });
@@ -784,13 +901,27 @@
     const badge = el("g", {class:"center-badge"}, svg);
     el("circle", {cx, cy, r: innerR-14}, badge);
     const champ = rounds[N-1][0];
-    const label = el("text", {x:cx, y:cy+4, "text-anchor":"middle", "font-size":"12"}, badge);
+    const label = el("text", {x:cx, y: champ && champ.status!=="final" ? cy-2 : cy+4, "text-anchor":"middle", "font-size":"12"}, badge);
     if(champ && champ.status === "final" && champ.winner){
       label.textContent = (champ.winner==="home" ? champ.home.code : champ.away.code) + " 🏆";
     } else {
-      label.textContent = "FINALE";
+      label.textContent = t("finale");
+      if(champ){
+        let sub = "";
+        if(champ.status === "live"){
+          sub = t("live");
+        } else if(champ.date){
+          const daysLeft = Math.ceil((new Date(champ.date).getTime() - Date.now()) / 86400000);
+          sub = daysLeft > 0 ? `${t("dIn")} ${daysLeft}${t("jShort")}` : t("today");
+        }
+        if(sub){
+          const subEl = el("text", {x:cx, y:cy+14, "text-anchor":"middle", "font-size":"9", fill:"var(--text-dim)"}, badge);
+          subEl.textContent = sub;
+        }
+      }
     }
     revealFade(badge, ENTRANCE_STEP_MS * (N + 1) + 220);
+    setupTrophyEasterEgg(badge);
 
     if(animateIn && revealQueue.length){
       // Two frames: the first commits the "hidden" state to the page, the
@@ -806,10 +937,11 @@
 
   /* ============ Tooltip ============ */
   function fmtStatus(m){
-    if(m.status === "final") return "Terminé";
-    if(m.status === "live") return "En direct";
-    if(m.date) return new Date(m.date).toLocaleString("fr-FR", {day:"2-digit", month:"short", hour:"2-digit", minute:"2-digit"});
-    return "À venir";
+    if(m.status === "final") return t("statusFinal");
+    if(m.status === "live") return t("statusLive");
+    const locale = lang === "en" ? "en-US" : lang === "es" ? "es-ES" : "fr-FR";
+    if(m.date) return new Date(m.date).toLocaleString(locale, {day:"2-digit", month:"short", hour:"2-digit", minute:"2-digit"});
+    return t("tbd");
   }
   function showTooltip(e, m){
     const homeName = m.home && m.home.name ? m.home.name : "À déterminer";
@@ -832,10 +964,10 @@
 
   /* ============ Load static JSON ============ */
   function setEmptyMessage(title, html){
-    const t = document.getElementById("emptyTitle");
-    const p = document.getElementById("emptyText");
-    if(t) t.textContent = title;
-    if(p) p.innerHTML = html;
+    const titleEl = document.getElementById("emptyTitle");
+    const textEl = document.getElementById("emptyText");
+    if(titleEl) titleEl.textContent = title;
+    if(textEl) textEl.innerHTML = html;
   }
 
   async function loadData(){
@@ -846,10 +978,7 @@
       rounds = data.rounds || [];
       const shouldAnimate = !hasPlayedEntrance && rounds.length > 0;
       if(!rounds.length){
-        setEmptyMessage(
-          "En attente de la première synchronisation",
-          "Le robot GitHub Actions n'a pas encore alimenté <code>data/bracket.json</code>. Lance-le une fois manuellement depuis l'onglet Actions du repo (bouton « Run workflow »), ou attends jusqu'à 5 minutes après le premier push."
-        );
+        setEmptyMessage(t("emptyWaitTitle"), t("emptyWaitText"));
       }
       render(shouldAnimate);
       if(shouldAnimate) hasPlayedEntrance = true;
@@ -858,10 +987,7 @@
     }catch(err){
       console.error(err);
       if(!rounds.length){
-        setEmptyMessage(
-          "Impossible de récupérer les données",
-          "La requête vers <code>data/bracket.json</code> a échoué (réseau, fichier manquant, ou cache). Si le fichier existe bien sur GitHub avec du contenu, essaie de recharger la page en navigation privée pour écarter un souci de cache."
-        );
+        setEmptyMessage(t("emptyErrTitle"), t("emptyErrText"));
         emptyOverlay.style.display = "flex";
       }
     }
@@ -919,7 +1045,7 @@
     const scoreEl = document.getElementById("nextMatchScore");
     if(!nextMatchRef){ return; }
     if(nextMatchRef.status === "live"){
-      el2.textContent = "🔴 En direct";
+      el2.textContent = t("live");
       const hs = nextMatchRef.score && nextMatchRef.score.home!=null ? nextMatchRef.score.home : 0;
       const as = nextMatchRef.score && nextMatchRef.score.away!=null ? nextMatchRef.score.away : 0;
       scoreEl.textContent = `${hs} – ${as}`;
@@ -928,13 +1054,14 @@
     scoreEl.textContent = "";
     if(!nextMatchRef.date){ el2.textContent = ""; return; }
     const diff = new Date(nextMatchRef.date).getTime() - Date.now();
-    if(diff <= 0){ el2.textContent = "⏱ Coup d'envoi…"; return; }
+    if(diff <= 0){ el2.textContent = t("kickoff"); return; }
     const totalSec = Math.floor(diff/1000);
     const d = Math.floor(totalSec/86400);
     const h = Math.floor((totalSec%86400)/3600);
     const mnt = Math.floor((totalSec%3600)/60);
     const s = totalSec%60;
-    el2.textContent = d>0 ? `dans ${d}j ${h}h` : (h>0 ? `dans ${h}h ${mnt}min` : `dans ${mnt}min ${String(s).padStart(2,"0")}s`);
+    const inW = t("dIn"), j = t("jShort"), hh = t("hShort"), mm = t("minShort");
+    el2.textContent = d>0 ? `${inW} ${d}${j} ${h}${hh}` : (h>0 ? `${inW} ${h}${hh} ${mnt}${mm}` : `${inW} ${mnt}${mm} ${String(s).padStart(2,"0")}s`);
   }
   setInterval(tickCountdown, 1000);
 
@@ -1193,7 +1320,7 @@
       deferredInstallPrompt = null;
       installBtn.classList.remove("show");
     } else if(isIOS){
-      alert("Pour installer : appuie sur le bouton Partager de Safari (le carré avec une flèche), puis « Sur l'écran d'accueil ».");
+      alert(t("iosInstall"));
     }
   });
 
@@ -1201,6 +1328,38 @@
     installBtn.classList.remove("show");
     deferredInstallPrompt = null;
   });
+
+  /* ============ Language toggle ============ */
+  const LANG_ORDER = ["fr", "en", "es"];
+  function applyStaticTranslations(){
+    document.getElementById("langBtn").textContent = lang.toUpperCase();
+    document.getElementById("subtitleText").innerHTML = t("subtitle");
+    document.getElementById("zoomHint").textContent = t("zoomHint");
+    document.getElementById("installBtnLabel").textContent = t("installBtn");
+    document.getElementById("statsBtnLabel").textContent = t("statsBtn");
+    document.getElementById("exportBtnLabel").textContent = t("exportBtn");
+    document.getElementById("retryBtn").textContent = t("retry");
+    document.documentElement.lang = lang;
+    if(!rounds.length){
+      // Only refresh the empty-state copy if it's currently showing the
+      // generic "waiting" message (don't clobber an active error message).
+      setEmptyMessage(t("emptyWaitTitle"), t("emptyWaitText"));
+    }
+  }
+  function setLang(newLang){
+    lang = newLang;
+    localStorage.setItem("wc2026-lang", lang);
+    applyStaticTranslations();
+    render();
+    updateFollowChip();
+    refreshNextMatch();
+    if(typeof renderStatsPanel === "function") renderStatsPanel();
+  }
+  document.getElementById("langBtn").addEventListener("click", ()=>{
+    const next = LANG_ORDER[(LANG_ORDER.indexOf(lang) + 1) % LANG_ORDER.length];
+    setLang(next);
+  });
+  applyStaticTranslations();
 
 })();
 </script>
