@@ -1,0 +1,539 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Mondial 2026 — Arbre circulaire</title>
+<style>
+  :root{
+    --bg:#0a1512;
+    --bg-alt:#0e1c17;
+    --panel:#12241d;
+    --panel-2:#16291f;
+    --line:#22392f;
+    --text:#f2efe4;
+    --text-dim:#8fa89b;
+    --text-faint:#5c7268;
+    --gold:#e2b84a;
+    --live:#ff5f5a;
+    --r1:#3fa66b;
+    --r2:#4bb08b;
+    --r3:#c9b354;
+    --r4:#dd8f4a;
+    --r5:#e0555f;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;}
+  body{
+    background:
+      radial-gradient(ellipse at 50% -10%, #16352a 0%, transparent 60%),
+      var(--bg);
+    color:var(--text);
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Inter,Helvetica,Arial,sans-serif;
+    min-height:100vh;
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+  }
+
+  /* ---------- Header ---------- */
+  header{
+    width:100%;
+    max-width:1100px;
+    padding:22px 20px 10px;
+    display:flex;
+    justify-content:space-between;
+    align-items:flex-start;
+    gap:16px;
+  }
+  .title-block h1{
+    margin:0;
+    font-size:clamp(20px,3.4vw,30px);
+    font-weight:800;
+    letter-spacing:-0.02em;
+    text-transform:uppercase;
+  }
+  .title-block h1 span{ color:var(--gold); }
+  .title-block p{
+    margin:4px 0 0;
+    color:var(--text-dim);
+    font-size:13px;
+    letter-spacing:.02em;
+  }
+  .header-right{
+    display:flex;
+    align-items:center;
+    gap:10px;
+  }
+  .status-pill{
+    display:flex;
+    align-items:center;
+    gap:7px;
+    padding:6px 12px;
+    border-radius:100px;
+    background:var(--panel);
+    border:1px solid var(--line);
+    font-size:12px;
+    color:var(--text-dim);
+    white-space:nowrap;
+  }
+  .status-dot{
+    width:7px;height:7px;border-radius:50%;
+    background:var(--text-faint);
+    flex:none;
+  }
+  .status-pill.live .status-dot{
+    background:var(--live);
+    box-shadow:0 0 0 0 rgba(255,95,90,.6);
+    animation:pulse 1.8s infinite;
+  }
+  .status-pill.live{ color:var(--text); border-color:rgba(255,95,90,.35); }
+  .status-pill.stale .status-dot{ background:var(--gold); }
+  @keyframes pulse{
+    0%{box-shadow:0 0 0 0 rgba(255,95,90,.55);}
+    70%{box-shadow:0 0 0 8px rgba(255,95,90,0);}
+    100%{box-shadow:0 0 0 0 rgba(255,95,90,0);}
+  }
+  .icon-btn{
+    width:34px;height:34px;
+    border-radius:10px;
+    border:1px solid var(--line);
+    background:var(--panel);
+    color:var(--text-dim);
+    display:flex;align-items:center;justify-content:center;
+    cursor:pointer;
+    transition:.15s;
+    flex:none;
+  }
+  .icon-btn:hover{ color:var(--text); border-color:var(--gold); }
+  .icon-btn svg{ width:16px;height:16px; }
+
+  /* ---------- Bracket wrap ---------- */
+  main{
+    width:100%;
+    max-width:1100px;
+    padding:10px 16px 30px;
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+  }
+  .stage{
+    position:relative;
+    width:100%;
+    max-width:920px;
+    aspect-ratio:1/1;
+  }
+  svg#bracket{ width:100%; height:100%; overflow:visible; }
+
+  .match-node{ cursor:pointer; }
+  .match-node .node-bg{
+    fill:var(--panel-2);
+    stroke:var(--line);
+    stroke-width:1.5;
+    transition:stroke .15s, fill .15s;
+  }
+  .match-node:hover .node-bg{ stroke:var(--gold); }
+  .match-node.live .node-bg{ stroke:var(--live); }
+  .match-node text{
+    fill:var(--text);
+    font-size:11px;
+    font-weight:600;
+  }
+  .match-node .score{
+    fill:var(--text-dim);
+    font-variant-numeric:tabular-nums;
+    font-weight:700;
+  }
+  .match-node.winner-home .home,
+  .match-node.winner-away .away{ fill:var(--gold); }
+
+  .leaf-label{
+    font-size:12px;
+    font-weight:700;
+    fill:var(--text);
+    letter-spacing:.02em;
+  }
+  .leaf-label.empty{ fill:var(--text-faint); font-weight:500; }
+
+  .edge{
+    fill:none;
+    stroke:var(--line);
+    stroke-width:1.5;
+  }
+  .ring-guide{
+    fill:none;
+    stroke:var(--line);
+    stroke-width:1;
+    opacity:.35;
+  }
+
+  .center-badge{ pointer-events:none; }
+  .center-badge circle{ fill:var(--panel); stroke:var(--gold); stroke-width:1.5; }
+  .center-badge text{ fill:var(--gold); font-weight:800; }
+
+  /* ---------- Empty state ---------- */
+  .empty-overlay{
+    position:absolute; inset:0;
+    display:flex; align-items:center; justify-content:center;
+    text-align:center;
+    padding:40px;
+    pointer-events:none;
+  }
+  .empty-card{ max-width:360px; pointer-events:auto; }
+  .empty-card h2{ margin:0 0 8px; font-size:16px; letter-spacing:.01em; }
+  .empty-card p{ margin:0 0 16px; font-size:13px; color:var(--text-dim); line-height:1.55; }
+
+  /* ---------- Legend ---------- */
+  .legend{
+    display:flex;
+    flex-wrap:wrap;
+    justify-content:center;
+    gap:14px;
+    margin-top:6px;
+    padding:12px 16px;
+  }
+  .legend-item{
+    display:flex; align-items:center; gap:6px;
+    font-size:11px; color:var(--text-dim);
+  }
+  .legend-dot{ width:8px;height:8px;border-radius:50%; }
+
+  .updated-line{
+    font-size:11px;
+    color:var(--text-faint);
+    margin-top:2px;
+  }
+
+  /* ---------- Tooltip ---------- */
+  #tooltip{
+    position:fixed;
+    z-index:50;
+    background:var(--panel);
+    border:1px solid var(--line);
+    border-radius:10px;
+    padding:10px 12px;
+    font-size:12px;
+    color:var(--text);
+    box-shadow:0 10px 30px rgba(0,0,0,.4);
+    pointer-events:none;
+    opacity:0;
+    transform:translateY(4px);
+    transition:opacity .1s, transform .1s;
+    max-width:220px;
+  }
+  #tooltip.show{ opacity:1; transform:translateY(0); }
+  #tooltip .tt-teams{ font-weight:700; margin-bottom:4px; }
+  #tooltip .tt-meta{ color:var(--text-dim); }
+
+  @media (prefers-reduced-motion: reduce){
+    .status-pill.live .status-dot{ animation:none; }
+    #tooltip{ transition:none; }
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="title-block">
+    <h1>Mondial 2026 <span>· Phases finales</span></h1>
+    <p>Arbre circulaire — des 32<sup>es</sup> de finale à la Finale</p>
+  </div>
+  <div class="header-right">
+    <div class="status-pill" id="statusPill">
+      <div class="status-dot"></div>
+      <span id="statusText">Chargement…</span>
+    </div>
+    <button class="icon-btn" id="refreshBtn" title="Actualiser">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"></polyline><polyline points="1 20 1 14 7 14"></polyline><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path></svg>
+    </button>
+  </div>
+</header>
+
+<main>
+  <div class="stage">
+    <svg id="bracket" viewBox="0 0 900 900"></svg>
+    <div class="empty-overlay" id="emptyOverlay">
+      <div class="empty-card">
+        <h2>En attente de la première synchronisation</h2>
+        <p>Le robot GitHub Actions n'a pas encore alimenté <code>data/bracket.json</code>. Lance-le une fois manuellement depuis l'onglet Actions du repo (bouton « Run workflow »), ou attends jusqu'à 5 minutes après le premier push.</p>
+      </div>
+    </div>
+  </div>
+
+  <div class="legend" id="legend"></div>
+  <div class="updated-line" id="updatedLine"></div>
+</main>
+
+<div id="tooltip"></div>
+
+<script>
+(function(){
+
+  /* ============ CONFIG ============ */
+  const DATA_URL = "./data/bracket.json";
+  const AUTO_REFRESH_MS = 60000; // re-read the (tiny, same-origin) JSON file every minute
+  const STALE_AFTER_MS = 20 * 60 * 1000; // warn if the file hasn't moved in 20 min
+
+  const ROUND_COLORS = ["--r1","--r2","--r3","--r4","--r5"];
+
+  /* ============ STATE ============ */
+  let rounds = [];
+
+  /* ============ DOM ============ */
+  const svg = document.getElementById("bracket");
+  const statusPill = document.getElementById("statusPill");
+  const statusText = document.getElementById("statusText");
+  const emptyOverlay = document.getElementById("emptyOverlay");
+  const legendEl = document.getElementById("legend");
+  const updatedLine = document.getElementById("updatedLine");
+  const tooltip = document.getElementById("tooltip");
+
+  const NS = "http://www.w3.org/2000/svg";
+  function el(tag, attrs, parent){
+    const e = document.createElementNS(NS, tag);
+    for(const k in attrs) e.setAttribute(k, attrs[k]);
+    if(parent) parent.appendChild(e);
+    return e;
+  }
+
+  /* ============ Round labels from match counts ============ */
+  function roundLabel(count){
+    switch(count){
+      case 16: return "32es de finale";
+      case 8:  return "8es de finale";
+      case 4:  return "Quarts de finale";
+      case 2:  return "Demi-finales";
+      case 1:  return "Finale";
+      default: return count + " matchs";
+    }
+  }
+
+  /* ============ Geometry helpers ============ */
+  function polar(cx, cy, r, angleDeg){
+    const a = (angleDeg - 90) * Math.PI / 180;
+    return { x: cx + r * Math.cos(a), y: cy + r * Math.sin(a) };
+  }
+  function arcPath(cx, cy, r, a1, a2){
+    const p1 = polar(cx, cy, r, a1);
+    const p2 = polar(cx, cy, r, a2);
+    const large = Math.abs(a2 - a1) > 180 ? 1 : 0;
+    const sweep = a2 > a1 ? 1 : 0;
+    return `M ${p1.x} ${p1.y} A ${r} ${r} 0 ${large} ${sweep} ${p2.x} ${p2.y}`;
+  }
+
+  /* ============ Build tree geometry & render ============ */
+  function render(){
+    svg.innerHTML = "";
+    legendEl.innerHTML = "";
+
+    if(!rounds.length){
+      emptyOverlay.style.display = "flex";
+      return;
+    }
+    emptyOverlay.style.display = "none";
+
+    const cx = 450, cy = 450;
+    const outerR = 430;
+    const innerR = 62;
+    const firstNodeR = 380;
+
+    const N = rounds.length;
+    const nodeRadii = [];
+    for(let k=0;k<N;k++){
+      nodeRadii.push( firstNodeR - (firstNodeR - innerR) * (k/(Math.max(N-1,1))) );
+    }
+
+    const leafCount = rounds[0].length * 2;
+    const leafAngles = [];
+    for(let i=0;i<leafCount;i++) leafAngles.push( i * 360/leafCount );
+
+    let currentAngles = leafAngles;
+    const roundAngles = [];
+
+    for(let k=0;k<N;k++){
+      const matches = rounds[k];
+      const angles = [];
+      for(let i=0;i<matches.length;i++){
+        const a1 = currentAngles[i*2];
+        const a2 = currentAngles[i*2+1];
+        let diff = a2 - a1;
+        while(diff > 180) diff -= 360;
+        while(diff < -180) diff += 360;
+        angles.push(a1 + diff/2);
+      }
+      roundAngles.push(angles);
+      currentAngles = angles;
+    }
+
+    for(let k=0;k<N;k++){
+      el("circle", {class:"ring-guide", cx, cy, r: nodeRadii[k]}, svg);
+    }
+    el("circle", {class:"ring-guide", cx, cy, r: outerR}, svg);
+
+    function pathEl(d){
+      const p = document.createElementNS(NS,"path");
+      p.setAttribute("class","edge");
+      p.setAttribute("d", d);
+      return p;
+    }
+    function drawEdges(childAngles, childR, matches, parentAngles, parentR){
+      for(let i=0;i<matches.length;i++){
+        const a1 = childAngles[i*2];
+        const a2 = childAngles[i*2+1];
+        [a1,a2].forEach(a=>{
+          const p1 = polar(cx,cy,childR,a);
+          const p2 = polar(cx,cy,parentR,a);
+          el("line", {class:"edge", x1:p1.x, y1:p1.y, x2:p2.x, y2:p2.y}, svg);
+        });
+        svg.appendChild( pathEl(arcPath(cx,cy,parentR,a1,a2)) );
+      }
+    }
+
+    drawEdges(leafAngles, outerR, rounds[0], roundAngles[0], nodeRadii[0]);
+    for(let k=0;k<N-1;k++){
+      drawEdges(roundAngles[k], nodeRadii[k], rounds[k+1], roundAngles[k+1], nodeRadii[k+1]);
+    }
+
+    const round0 = rounds[0];
+    for(let i=0;i<round0.length;i++){
+      const m = round0[i];
+      [ [m.home, i*2], [m.away, i*2+1] ].forEach(([team, idx])=>{
+        const a = leafAngles[idx];
+        const p = polar(cx, cy, outerR + 14, a);
+        const leftSide = a > 90 && a < 270;
+        const t = el("text", {
+          class: "leaf-label" + (team && team.name ? "" : " empty"),
+          x: p.x, y: p.y,
+          "text-anchor": leftSide ? "end" : "start",
+          transform: `rotate(${a-90+(leftSide?180:0)}, ${p.x}, ${p.y})`
+        }, svg);
+        t.textContent = team && team.name ? team.name : "À déterminer";
+      });
+    }
+
+    const boxW = 96, boxH = 30;
+    for(let k=0;k<N;k++){
+      const matches = rounds[k];
+      const colorVar = ROUND_COLORS[Math.min(k, ROUND_COLORS.length-1)];
+      const li = document.createElement("div");
+      li.className = "legend-item";
+      li.innerHTML = `<span class="legend-dot" style="background:var(${colorVar})"></span>${roundLabel(matches.length)}`;
+      legendEl.appendChild(li);
+
+      for(let i=0;i<matches.length;i++){
+        const m = matches[i];
+        const a = roundAngles[k][i];
+        const r = nodeRadii[k];
+        const p = polar(cx, cy, r, a);
+
+        const g = el("g", {
+          class: "match-node" + (m.status==="live" ? " live" : "") +
+                  (m.winner==="home" ? " winner-home" : "") +
+                  (m.winner==="away" ? " winner-away" : ""),
+          transform: `translate(${p.x - boxW/2}, ${p.y - boxH/2})`
+        }, svg);
+
+        el("rect", {class:"node-bg", x:0, y:0, width:boxW, height:boxH, rx:7, stroke: `var(${colorVar})`}, g);
+
+        const homeCode = m.home && m.home.code ? m.home.code : "—";
+        const awayCode = m.away && m.away.code ? m.away.code : "—";
+        const homeScore = m.score && m.score.home!=null ? m.score.home : "";
+        const awayScore = m.score && m.score.away!=null ? m.score.away : "";
+
+        const t1 = el("text", {class:"home", x:8, y:12}, g); t1.textContent = homeCode;
+        const s1 = el("text", {class:"score", x:boxW-8, y:12, "text-anchor":"end"}, g); s1.textContent = homeScore;
+        const t2 = el("text", {class:"away", x:8, y:24}, g); t2.textContent = awayCode;
+        const s2 = el("text", {class:"score", x:boxW-8, y:24, "text-anchor":"end"}, g); s2.textContent = awayScore;
+
+        g.addEventListener("mouseenter", (e)=> showTooltip(e, m));
+        g.addEventListener("mousemove", moveTooltip);
+        g.addEventListener("mouseleave", hideTooltip);
+        g.addEventListener("click", (e)=> showTooltip(e, m));
+      }
+    }
+
+    const badge = el("g", {class:"center-badge"}, svg);
+    el("circle", {cx, cy, r: innerR-14}, badge);
+    const champ = rounds[N-1][0];
+    const label = el("text", {x:cx, y:cy+4, "text-anchor":"middle", "font-size":"12"}, badge);
+    if(champ && champ.status === "final" && champ.winner){
+      label.textContent = (champ.winner==="home" ? champ.home.code : champ.away.code) + " 🏆";
+    } else {
+      label.textContent = "FINALE";
+    }
+  }
+
+  /* ============ Tooltip ============ */
+  function fmtStatus(m){
+    if(m.status === "final") return "Terminé";
+    if(m.status === "live") return "En direct";
+    if(m.date) return new Date(m.date).toLocaleString("fr-FR", {day:"2-digit", month:"short", hour:"2-digit", minute:"2-digit"});
+    return "À venir";
+  }
+  function showTooltip(e, m){
+    const homeName = m.home && m.home.name ? m.home.name : "À déterminer";
+    const awayName = m.away && m.away.name ? m.away.name : "À déterminer";
+    tooltip.innerHTML = `<div class="tt-teams">${homeName} vs ${awayName}</div><div class="tt-meta">${fmtStatus(m)}</div>`;
+    tooltip.classList.add("show");
+    moveTooltip(e);
+  }
+  function moveTooltip(e){
+    tooltip.style.left = (e.clientX + 14) + "px";
+    tooltip.style.top = (e.clientY + 14) + "px";
+  }
+  function hideTooltip(){ tooltip.classList.remove("show"); }
+
+  /* ============ Status pill ============ */
+  function setStatus(mode, updatedAt){
+    statusPill.classList.remove("live","stale");
+    if(mode === "live"){
+      statusPill.classList.add("live");
+      statusText.textContent = "À jour";
+      updatedLine.textContent = updatedAt ? ("Dernière synchro " + new Date(updatedAt).toLocaleString("fr-FR")) : "";
+    } else if(mode === "stale"){
+      statusPill.classList.add("stale");
+      statusText.textContent = "Données anciennes";
+      updatedLine.textContent = updatedAt ? ("Dernière synchro " + new Date(updatedAt).toLocaleString("fr-FR") + " — le robot GitHub Actions semble à l'arrêt.") : "";
+    } else if(mode === "error"){
+      statusText.textContent = "Erreur de chargement";
+      updatedLine.textContent = "Impossible de lire data/bracket.json — vérifie que le fichier existe et que Pages est bien activé.";
+    } else {
+      statusText.textContent = "Chargement…";
+      updatedLine.textContent = "";
+    }
+  }
+
+  /* ============ Load static JSON ============ */
+  async function loadData(){
+    try{
+      const res = await fetch(DATA_URL + "?t=" + Date.now(), { cache: "no-store" });
+      if(!res.ok) throw new Error("HTTP " + res.status);
+      const data = await res.json();
+      rounds = data.rounds || [];
+      if(!rounds.length){
+        setStatus("none");
+      } else if(data.updated && (Date.now() - new Date(data.updated).getTime()) > STALE_AFTER_MS){
+        setStatus("stale", data.updated);
+      } else {
+        setStatus("live", data.updated);
+      }
+      render();
+    }catch(err){
+      console.error(err);
+      setStatus("error");
+      render();
+    }
+  }
+
+  document.getElementById("refreshBtn").addEventListener("click", loadData);
+
+  /* ============ Init ============ */
+  setStatus("none");
+  render();
+  loadData();
+  setInterval(loadData, AUTO_REFRESH_MS);
+
+})();
+</script>
+</body>
+</html>
