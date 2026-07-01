@@ -2,7 +2,8 @@
 // always prefers the network when it's available — so pushing a new
 // index.html actually reaches returning visitors instead of them being stuck
 // on whatever was cached the first time they opened the site.
-const CACHE_NAME = "mondial2026-shell-v2";
+const CACHE_NAME = "mondial2026-shell-v3";
+const LIVE_DATA_URL = "https://world-cup-data.pointvirgule.dev/bracket.json";
 const SHELL_FILES = [
   "./",
   "./index.html",
@@ -31,7 +32,7 @@ self.addEventListener("fetch", (event) => {
   const url = new URL(event.request.url);
 
   // Live data: always go to the network, never serve a cached/stale bracket.
-  if (url.pathname.endsWith("data/bracket.json")) {
+  if (url.origin + url.pathname === LIVE_DATA_URL) {
     event.respondWith(fetch(event.request).catch(() => caches.match(event.request)));
     return;
   }
