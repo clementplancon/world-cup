@@ -542,12 +542,12 @@
     });
   }
 
-  // Given a team code, returns { leafIdx, matchIndices } describing its exact
-  // path through the bracket: which of the 32 leaf slots it starts in, and
-  // which match index it occupies at every subsequent round. Bracket pairing
-  // is always "match i draws from leaves/matches 2i and 2i+1", so the whole
-  // path can be derived with simple integer halving — no need to search each
-  // round's match list.
+  // Given a team code, returns { leafIdx, matchIndices, eliminatedRound } describing
+  // its exact path through the bracket: which of the 32 leaf slots it starts in,
+  // which match index it occupies at every subsequent round, and — if the team has
+  // lost — the round index at which it was knocked out. Bracket pairing is always
+  // "match i draws from leaves/matches 2i and 2i+1", so the whole path can be
+  // derived with simple integer halving — no need to search each round's match list.
   function computePath(code){
     if(!code || !rounds.length) return null;
     const round0 = rounds[0];
@@ -558,12 +558,18 @@
     }
     if(leafIdx === -1) return null;
     const matchIndices = [];
+    let eliminatedRound = -1; // -1 = still alive (or won it all)
     let idx = Math.floor(leafIdx/2);
     for(let k=0;k<rounds.length;k++){
       matchIndices.push(idx);
+      const m = rounds[k][idx];
+      if(m && m.status === "final" && m.winner){
+        const loser = m.winner === "home" ? m.away : m.home;
+        if(loser && loser.code === code){ eliminatedRound = k; break; }
+      }
       idx = Math.floor(idx/2);
     }
-    return { leafIdx, matchIndices };
+    return { leafIdx, matchIndices, eliminatedRound };
   }
 
   function followTeam(code){
@@ -778,7 +784,9 @@
         const parentOnPath = !pathInfo || pathInfo.matchIndices[parentRoundIdx] === i;
         [a1,a2].forEach((a,c)=>{
           const childPos = i*2+c;
-          const childOnPath = !pathInfo || (childRoundIdx === -1 ? pathInfo.leafIdx === childPos : pathInfo.matchIndices[childRoundIdx] === childPos);
+          const childOnPath = !pathInfo || (childRoundIdx === -1
+            ? pathInfo.leafIdx === childPos
+            : (pathInfo.matchIndices[childRoundIdx] === childPos && pathInfo.matchIndices[parentRoundIdx] === i));
           const p1 = polar(cx,cy,childR,a);
           const p2 = polar(cx,cy,parentR,a);
           const width = childOnPath ? 3 : 1;
