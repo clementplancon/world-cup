@@ -180,20 +180,32 @@
     .chip{ max-width:min(70vw, 280px); font-size:11px; }
   }
 
-  .icon-fab{
+  .action-stack{
     position:absolute;
     bottom:74px; left:14px;
-    width:34px; height:34px;
-    border-radius:9px;
+    display:flex;
+    flex-direction:column;
+    gap:8px;
+    z-index:15;
+  }
+  .icon-fab{
+    padding:8px 14px;
+    border-radius:100px;
     border:1px solid var(--line);
     background:var(--panel);
     color:var(--text);
-    display:flex; align-items:center; justify-content:center;
+    display:flex; align-items:center; gap:8px;
     cursor:pointer;
-    z-index:15;
+    font-size:12px;
+    font-weight:600;
+    white-space:nowrap;
   }
   .icon-fab:active{ border-color:var(--gold); }
-  .icon-fab svg{ width:16px; height:16px; }
+  .icon-fab svg{ width:16px; height:16px; flex:none; }
+  #installBtn{ display:none; }
+  @media (max-width: 640px){
+    #installBtn.show{ display:flex; }
+  }
 
   .leaf-label{
     font-size:12px;
@@ -345,9 +357,16 @@
       <button id="zoomInBtn" title="Zoomer">+</button>
       <button id="zoomOutBtn" title="Dézoomer">−</button>
     </div>
-    <button class="icon-fab" id="exportBtn" title="Exporter en image">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
-    </button>
+    <div class="action-stack">
+      <button class="icon-fab" id="installBtn" title="Installer l'application">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="2" width="14" height="20" rx="2"></rect><line x1="12" y1="18" x2="12.01" y2="18"></line></svg>
+        <span>Installer l'application</span>
+      </button>
+      <button class="icon-fab" id="exportBtn" title="Télécharger l'image">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
+        <span>Télécharger l'image</span>
+      </button>
+    </div>
     <div class="empty-overlay" id="emptyOverlay">
       <div class="empty-card">
         <h2 id="emptyTitle">En attente de la première synchronisation</h2>
@@ -1146,6 +1165,42 @@
       navigator.serviceWorker.register("./service-worker.js").catch(err=> console.warn("SW registration failed:", err));
     });
   }
+
+  /* ============ Install button ============ */
+  const installBtn = document.getElementById("installBtn");
+  const isStandalone = window.matchMedia("(display-mode: standalone)").matches || window.navigator.standalone === true;
+  const isIOS = /iphone|ipad|ipod/i.test(navigator.userAgent) && !window.MSStream;
+  let deferredInstallPrompt = null;
+
+  if(!isStandalone){
+    // Android/Chrome: fires when the browser judges the site installable.
+    window.addEventListener("beforeinstallprompt", (e)=>{
+      e.preventDefault();
+      deferredInstallPrompt = e;
+      installBtn.classList.add("show");
+    });
+    // iOS Safari never fires beforeinstallprompt — there's no programmatic
+    // install API there, so offer the button with manual instructions instead.
+    if(isIOS){
+      installBtn.classList.add("show");
+    }
+  }
+
+  installBtn.addEventListener("click", async ()=>{
+    if(deferredInstallPrompt){
+      deferredInstallPrompt.prompt();
+      await deferredInstallPrompt.userChoice;
+      deferredInstallPrompt = null;
+      installBtn.classList.remove("show");
+    } else if(isIOS){
+      alert("Pour installer : appuie sur le bouton Partager de Safari (le carré avec une flèche), puis « Sur l'écran d'accueil ».");
+    }
+  });
+
+  window.addEventListener("appinstalled", ()=>{
+    installBtn.classList.remove("show");
+    deferredInstallPrompt = null;
+  });
 
 })();
 </script>
