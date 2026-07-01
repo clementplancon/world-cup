@@ -1,4 +1,542 @@
 {
-  "updated": null,
-  "rounds": []
+  "updated": "2026-07-01T07:29:40.872Z",
+  "rounds": [
+    [
+      {
+        "home": {
+          "code": "RSA",
+          "name": "South Africa"
+        },
+        "away": {
+          "code": "CAN",
+          "name": "Canada"
+        },
+        "score": {
+          "home": 0,
+          "away": 1
+        },
+        "status": "final",
+        "winner": "away",
+        "date": "2026-06-28T19:00:00Z"
+      },
+      {
+        "home": {
+          "code": "BRA",
+          "name": "Brazil"
+        },
+        "away": {
+          "code": "JPN",
+          "name": "Japan"
+        },
+        "score": {
+          "home": 2,
+          "away": 1
+        },
+        "status": "final",
+        "winner": "home",
+        "date": "2026-06-29T17:00:00Z"
+      },
+      {
+        "home": {
+          "code": "GER",
+          "name": "Germany"
+        },
+        "away": {
+          "code": "PAR",
+          "name": "Paraguay"
+        },
+        "score": {
+          "home": 4,
+          "away": 5
+        },
+        "status": "final",
+        "winner": "away",
+        "date": "2026-06-29T20:30:00Z"
+      },
+      {
+        "home": {
+          "code": "NED",
+          "name": "Netherlands"
+        },
+        "away": {
+          "code": "MAR",
+          "name": "Morocco"
+        },
+        "score": {
+          "home": 3,
+          "away": 4
+        },
+        "status": "final",
+        "winner": "away",
+        "date": "2026-06-30T01:00:00Z"
+      },
+      {
+        "home": {
+          "code": "CIV",
+          "name": "Ivory Coast"
+        },
+        "away": {
+          "code": "NOR",
+          "name": "Norway"
+        },
+        "score": {
+          "home": 1,
+          "away": 2
+        },
+        "status": "final",
+        "winner": "away",
+        "date": "2026-06-30T17:00:00Z"
+      },
+      {
+        "home": {
+          "code": "FRA",
+          "name": "France"
+        },
+        "away": {
+          "code": "SWE",
+          "name": "Sweden"
+        },
+        "score": {
+          "home": 3,
+          "away": 0
+        },
+        "status": "final",
+        "winner": "home",
+        "date": "2026-06-30T21:00:00Z"
+      },
+      {
+        "home": {
+          "code": "MEX",
+          "name": "Mexico"
+        },
+        "away": {
+          "code": "ECU",
+          "name": "Ecuador"
+        },
+        "score": {
+          "home": 2,
+          "away": 0
+        },
+        "status": "final",
+        "winner": "home",
+        "date": "2026-07-01T01:00:00Z"
+      },
+      {
+        "home": {
+          "code": "ENG",
+          "name": "England"
+        },
+        "away": {
+          "code": "COD",
+          "name": "Congo DR"
+        },
+        "score": {
+          "home": null,
+          "away": null
+        },
+        "status": "scheduled",
+        "winner": null,
+        "date": "2026-07-01T16:00:00Z"
+      },
+      {
+        "home": {
+          "code": "BEL",
+          "name": "Belgium"
+        },
+        "away": {
+          "code": "SEN",
+          "name": "Senegal"
+        },
+        "score": {
+          "home": null,
+          "away": null
+        },
+        "status": "scheduled",
+        "winner": null,
+        "date": "2026-07-01T20:00:00Z"
+      },
+      {
+        "home": {
+          "code": "USA",
+          "name": "USA"
+        },
+        "away": {
+          "code": "BIH",
+          "name": "Bosnia-H."
+        },
+        "score": {
+          "home": null,
+          "away": null
+        },
+        "status": "scheduled",
+        "winner": null,
+        "date": "2026-07-02T00:00:00Z"
+      },
+      {
+        "home": {
+          "code": "ESP",
+          "name": "Spain"
+        },
+        "away": {
+          "code": "AUT",
+          "name": "Austria"
+        },
+        "score": {
+          "home": null,
+          "away": null
+        },
+        "status": "scheduled",
+        "winner": null,
+        "date": "2026-07-02T19:00:00Z"
+      },
+      {
+        "home": {
+          "code": "POR",
+          "name": "Portugal"
+        },
+        "away": {
+          "code": "CRO",
+          "name": "Croatia"
+        },
+        "score": {
+          "home": null,
+          "away": null
+        },
+        "status": "scheduled",
+        "winner": null,
+        "date": "2026-07-02T23:00:00Z"
+      },
+      {
+        "home": {
+          "code": "SUI",
+          "name": "Switzerland"
+        },
+        "away": {
+          "code": "ALG",
+          "name": "Algeria"
+        },
+        "score": {
+          "home": null,
+          "away": null
+        },
+        "status": "scheduled",
+        "winner": null,
+        "date": "2026-07-03T03:00:00Z"
+      },
+      {
+        "home": {
+          "code": "AUS",
+          "name": "Australia"
+        },
+        "away": {
+          "code": "EGY",
+          "name": "Egypt"
+        },
+        "score": {
+          "home": null,
+          "away": null
+        },
+        "status": "scheduled",
+        "winner": null,
+        "date": "2026-07-03T18:00:00Z"
+      },
+      {
+        "home": {
+          "code": "ARG",
+          "name": "Argentina"
+        },
+        "away": {
+          "code": "CPV",
+          "name": "Cape Verde"
+        },
+        "score": {
+          "home": null,
+          "away": null
+        },
+        "status": "scheduled",
+        "winner": null,
+        "date": "2026-07-03T22:00:00Z"
+      },
+      {
+        "home": {
+          "code": "COL",
+          "name": "Colombia"
+        },
+        "away": {
+          "code": "GHA",
+          "name": "Ghana"
+        },
+        "score": {
+          "home": null,
+          "away": null
+        },
+        "status": "scheduled",
+        "winner": null,
+        "date": "2026-07-04T01:30:00Z"
+      }
+    ],
+    [
+      {
+        "home": {
+          "code": "CAN",
+          "name": "Canada"
+        },
+        "away": {
+          "code": "MAR",
+          "name": "Morocco"
+        },
+        "score": {
+          "home": null,
+          "away": null
+        },
+        "status": "scheduled",
+        "winner": null,
+        "date": "2026-07-04T17:00:00Z"
+      },
+      {
+        "home": {
+          "code": "PAR",
+          "name": "Paraguay"
+        },
+        "away": {
+          "code": "FRA",
+          "name": "France"
+        },
+        "score": {
+          "home": null,
+          "away": null
+        },
+        "status": "scheduled",
+        "winner": null,
+        "date": "2026-07-04T21:00:00Z"
+      },
+      {
+        "home": {
+          "code": "BRA",
+          "name": "Brazil"
+        },
+        "away": {
+          "code": "NOR",
+          "name": "Norway"
+        },
+        "score": {
+          "home": null,
+          "away": null
+        },
+        "status": "scheduled",
+        "winner": null,
+        "date": "2026-07-05T20:00:00Z"
+      },
+      {
+        "home": {
+          "code": "",
+          "name": null
+        },
+        "away": {
+          "code": "",
+          "name": null
+        },
+        "score": {
+          "home": null,
+          "away": null
+        },
+        "status": "scheduled",
+        "winner": null,
+        "date": "2026-07-06T00:00:00Z"
+      },
+      {
+        "home": {
+          "code": "",
+          "name": null
+        },
+        "away": {
+          "code": "",
+          "name": null
+        },
+        "score": {
+          "home": null,
+          "away": null
+        },
+        "status": "scheduled",
+        "winner": null,
+        "date": "2026-07-06T19:00:00Z"
+      },
+      {
+        "home": {
+          "code": "",
+          "name": null
+        },
+        "away": {
+          "code": "",
+          "name": null
+        },
+        "score": {
+          "home": null,
+          "away": null
+        },
+        "status": "scheduled",
+        "winner": null,
+        "date": "2026-07-07T00:00:00Z"
+      },
+      {
+        "home": {
+          "code": "",
+          "name": null
+        },
+        "away": {
+          "code": "",
+          "name": null
+        },
+        "score": {
+          "home": null,
+          "away": null
+        },
+        "status": "scheduled",
+        "winner": null,
+        "date": "2026-07-07T16:00:00Z"
+      },
+      {
+        "home": {
+          "code": "",
+          "name": null
+        },
+        "away": {
+          "code": "",
+          "name": null
+        },
+        "score": {
+          "home": null,
+          "away": null
+        },
+        "status": "scheduled",
+        "winner": null,
+        "date": "2026-07-07T20:00:00Z"
+      }
+    ],
+    [
+      {
+        "home": {
+          "code": "",
+          "name": null
+        },
+        "away": {
+          "code": "",
+          "name": null
+        },
+        "score": {
+          "home": null,
+          "away": null
+        },
+        "status": "scheduled",
+        "winner": null,
+        "date": "2026-07-09T20:00:00Z"
+      },
+      {
+        "home": {
+          "code": "",
+          "name": null
+        },
+        "away": {
+          "code": "",
+          "name": null
+        },
+        "score": {
+          "home": null,
+          "away": null
+        },
+        "status": "scheduled",
+        "winner": null,
+        "date": "2026-07-10T19:00:00Z"
+      },
+      {
+        "home": {
+          "code": "",
+          "name": null
+        },
+        "away": {
+          "code": "",
+          "name": null
+        },
+        "score": {
+          "home": null,
+          "away": null
+        },
+        "status": "scheduled",
+        "winner": null,
+        "date": "2026-07-11T21:00:00Z"
+      },
+      {
+        "home": {
+          "code": "",
+          "name": null
+        },
+        "away": {
+          "code": "",
+          "name": null
+        },
+        "score": {
+          "home": null,
+          "away": null
+        },
+        "status": "scheduled",
+        "winner": null,
+        "date": "2026-07-12T01:00:00Z"
+      }
+    ],
+    [
+      {
+        "home": {
+          "code": "",
+          "name": null
+        },
+        "away": {
+          "code": "",
+          "name": null
+        },
+        "score": {
+          "home": null,
+          "away": null
+        },
+        "status": "scheduled",
+        "winner": null,
+        "date": "2026-07-14T19:00:00Z"
+      },
+      {
+        "home": {
+          "code": "",
+          "name": null
+        },
+        "away": {
+          "code": "",
+          "name": null
+        },
+        "score": {
+          "home": null,
+          "away": null
+        },
+        "status": "scheduled",
+        "winner": null,
+        "date": "2026-07-15T19:00:00Z"
+      }
+    ],
+    [
+      {
+        "home": {
+          "code": "",
+          "name": null
+        },
+        "away": {
+          "code": "",
+          "name": null
+        },
+        "score": {
+          "home": null,
+          "away": null
+        },
+        "status": "scheduled",
+        "winner": null,
+        "date": "2026-07-19T19:00:00Z"
+      }
+    ]
+  ]
 }
