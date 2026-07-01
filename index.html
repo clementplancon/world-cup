@@ -144,8 +144,17 @@
     font-variant-numeric:tabular-nums;
     font-weight:700;
   }
+  .match-node .pen{
+    fill:var(--text-faint);
+    font-size:9px;
+    font-weight:600;
+  }
   .match-node.winner-home .home,
   .match-node.winner-away .away{ fill:var(--gold); }
+
+  .flag-bubble circle.ring{ fill:var(--panel); stroke:var(--line); stroke-width:1; }
+  .flag-bubble image{ transition:filter .2s, opacity .2s; }
+  .flag-bubble.eliminated image{ filter:grayscale(1); opacity:.4; }
 
   .leaf-label{
     font-size:12px;
@@ -154,6 +163,7 @@
     letter-spacing:.02em;
   }
   .leaf-label.empty{ fill:var(--text-faint); font-weight:500; }
+  .leaf-label.eliminated{ fill:var(--text-faint); }
 
   .edge{
     fill:none;
@@ -251,7 +261,7 @@
 
 <main>
   <div class="stage">
-    <svg id="bracket" viewBox="0 0 900 900"></svg>
+    <svg id="bracket" viewBox="0 0 960 960"></svg>
     <div class="empty-overlay" id="emptyOverlay">
       <div class="empty-card">
         <h2>En attente de la première synchronisation</h2>
@@ -276,8 +286,45 @@
 
   const ROUND_COLORS = ["--r1","--r2","--r3","--r4","--r5"];
 
+  // FIFA code -> flagcdn.com country code (some UK nations use flagcdn's
+  // subdivision flags). Covers the 48 qualified nations, with a few common
+  // alternate codes as a safety net in case football-data.org's tla differs.
+  const FLAG_MAP = {
+    MEX:"mx", RSA:"za", KOR:"kr", CZE:"cz",
+    SUI:"ch", CHE:"ch", CAN:"ca", BIH:"ba", QAT:"qa",
+    BRA:"br", MAR:"ma", SCO:"gb-sct", HTI:"ht",
+    USA:"us", AUS:"au", PAR:"py", TUR:"tr",
+    GER:"de", CIV:"ci", CTI:"ci", ECU:"ec", CUW:"cw",
+    NED:"nl", HOL:"nl", JPN:"jp", SWE:"se", TUN:"tn",
+    BEL:"be", EGY:"eg", IRN:"ir", NZL:"nz",
+    ESP:"es", CPV:"cv", CAV:"cv", URU:"uy", KSA:"sa", SAU:"sa",
+    FRA:"fr", NOR:"no", SEN:"sn", IRQ:"iq",
+    ARG:"ar", AUT:"at", DZA:"dz", ALG:"dz", JOR:"jo",
+    COL:"co", POR:"pt", COD:"cd", ZAI:"cd", UZB:"uz",
+    ENG:"gb-eng", CRO:"hr", GHA:"gh", PAN:"pa",
+    WAL:"gb-wls", NIR:"gb-nir"
+  };
+  function flagUrl(code){
+    if(!code) return null;
+    const iso = FLAG_MAP[code.toUpperCase()];
+    return iso ? `https://flagcdn.com/w80/${iso}.png` : null;
+  }
+
   /* ============ STATE ============ */
   let rounds = [];
+  let eliminated = new Set(); // team codes knocked out
+
+  function computeEliminated(){
+    eliminated = new Set();
+    rounds.forEach(round=>{
+      round.forEach(m=>{
+        if(m.status === "final" && m.winner){
+          const loser = m.winner === "home" ? m.away : m.home;
+          if(loser && loser.code) eliminated.add(loser.code);
+        }
+      });
+    });
+  }
 
   /* ============ DOM ============ */
   const svg = document.getElementById("bracket");
@@ -294,6 +341,28 @@
     for(const k in attrs) e.setAttribute(k, attrs[k]);
     if(parent) parent.appendChild(e);
     return e;
+  }
+
+  let flagUid = 0;
+  function drawFlag(parent, x, y, r, code){
+    const g = el("g", {class:"flag-bubble" + (code && eliminated.has(code) ? " eliminated" : "")}, parent);
+    el("circle", {class:"ring", cx:x, cy:y, r: r+1.5}, g);
+    const url = flagUrl(code);
+    if(url){
+      const uid = "flagclip" + (flagUid++);
+      const clip = el("clipPath", {id: uid}, g);
+      el("circle", {cx:x, cy:y, r}, clip);
+      el("image", {
+        href:url, "xlink:href":url,
+        x:x-r, y:y-r, width:r*2, height:r*2,
+        preserveAspectRatio:"xMidYMid slice",
+        "clip-path": `url(#${uid})`
+      }, g);
+    } else {
+      const t = el("text", {x, y:y+3, "text-anchor":"middle", "font-size":r, fill:"var(--text-faint)"}, g);
+      t.textContent = code ? code[0] : "?";
+    }
+    return g;
   }
 
   /* ============ Round labels from match counts ============ */
@@ -331,11 +400,12 @@
       return;
     }
     emptyOverlay.style.display = "none";
+    computeEliminated();
 
-    const cx = 450, cy = 450;
-    const outerR = 430;
+    const cx = 480, cy = 480;
+    const outerR = 400;
     const innerR = 62;
-    const firstNodeR = 380;
+    const firstNodeR = 355;
 
     const N = rounds.length;
     const nodeRadii = [];
@@ -399,19 +469,22 @@
       const m = round0[i];
       [ [m.home, i*2], [m.away, i*2+1] ].forEach(([team, idx])=>{
         const a = leafAngles[idx];
-        const p = polar(cx, cy, outerR + 14, a);
-        const leftSide = a > 90 && a < 270;
+        const flip = a >= 180; // bottom half of the circle: rotate 180° more so text isn't upside down
+        const flagP = polar(cx, cy, outerR + 10, a);
+        drawFlag(svg, flagP.x, flagP.y, 9, team && team.code);
+
+        const p = polar(cx, cy, outerR + 26, a);
         const t = el("text", {
-          class: "leaf-label" + (team && team.name ? "" : " empty"),
+          class: "leaf-label" + (team && team.name ? "" : " empty") + (team && team.code && eliminated.has(team.code) ? " eliminated" : ""),
           x: p.x, y: p.y,
-          "text-anchor": leftSide ? "end" : "start",
-          transform: `rotate(${a-90+(leftSide?180:0)}, ${p.x}, ${p.y})`
+          "text-anchor": flip ? "end" : "start",
+          transform: `rotate(${a-90+(flip?180:0)}, ${p.x}, ${p.y})`
         }, svg);
         t.textContent = team && team.name ? team.name : "À déterminer";
       });
     }
 
-    const boxW = 96, boxH = 30;
+    const boxW = 128, boxH = 34;
     for(let k=0;k<N;k++){
       const matches = rounds[k];
       const colorVar = ROUND_COLORS[Math.min(k, ROUND_COLORS.length-1)];
@@ -433,17 +506,28 @@
           transform: `translate(${p.x - boxW/2}, ${p.y - boxH/2})`
         }, svg);
 
-        el("rect", {class:"node-bg", x:0, y:0, width:boxW, height:boxH, rx:7, stroke: `var(${colorVar})`}, g);
+        el("rect", {class:"node-bg", x:0, y:0, width:boxW, height:boxH, rx:8, stroke: `var(${colorVar})`}, g);
 
-        const homeCode = m.home && m.home.code ? m.home.code : "—";
-        const awayCode = m.away && m.away.code ? m.away.code : "—";
+        const homeCode = m.home && m.home.code ? m.home.code : null;
+        const awayCode = m.away && m.away.code ? m.away.code : null;
         const homeScore = m.score && m.score.home!=null ? m.score.home : "";
         const awayScore = m.score && m.score.away!=null ? m.score.away : "";
+        const homePen = m.penalties && m.penalties.home!=null ? `(${m.penalties.home})` : "";
+        const awayPen = m.penalties && m.penalties.away!=null ? `(${m.penalties.away})` : "";
 
-        const t1 = el("text", {class:"home", x:8, y:12}, g); t1.textContent = homeCode;
-        const s1 = el("text", {class:"score", x:boxW-8, y:12, "text-anchor":"end"}, g); s1.textContent = homeScore;
-        const t2 = el("text", {class:"away", x:8, y:24}, g); t2.textContent = awayCode;
-        const s2 = el("text", {class:"score", x:boxW-8, y:24, "text-anchor":"end"}, g); s2.textContent = awayScore;
+        drawFlag(g, 12, 10, 8, homeCode);
+        drawFlag(g, 12, 24, 8, awayCode);
+
+        const t1 = el("text", {class:"home", x:26, y:13}, g); t1.textContent = homeCode || "—";
+        const t2 = el("text", {class:"away", x:26, y:27}, g); t2.textContent = awayCode || "—";
+
+        const s1 = el("text", {class:"score", x:boxW-10, y:13, "text-anchor":"end"}, g); s1.textContent = homeScore;
+        const s2 = el("text", {class:"score", x:boxW-10, y:27, "text-anchor":"end"}, g); s2.textContent = awayScore;
+
+        if(homePen || awayPen){
+          const pn1 = el("text", {class:"pen", x:boxW-10-16, y:13, "text-anchor":"end"}, g); pn1.textContent = homePen;
+          const pn2 = el("text", {class:"pen", x:boxW-10-16, y:27, "text-anchor":"end"}, g); pn2.textContent = awayPen;
+        }
 
         g.addEventListener("mouseenter", (e)=> showTooltip(e, m));
         g.addEventListener("mousemove", moveTooltip);
@@ -473,7 +557,13 @@
   function showTooltip(e, m){
     const homeName = m.home && m.home.name ? m.home.name : "À déterminer";
     const awayName = m.away && m.away.name ? m.away.name : "À déterminer";
-    tooltip.innerHTML = `<div class="tt-teams">${homeName} vs ${awayName}</div><div class="tt-meta">${fmtStatus(m)}</div>`;
+    let scoreLine = "";
+    if(m.score && m.score.home!=null){
+      const hp = m.penalties && m.penalties.home!=null ? ` (${m.penalties.home})` : "";
+      const ap = m.penalties && m.penalties.away!=null ? ` (${m.penalties.away})` : "";
+      scoreLine = `<div class="tt-meta">${m.score.home}${hp} – ${m.score.away}${ap}</div>`;
+    }
+    tooltip.innerHTML = `<div class="tt-teams">${homeName} vs ${awayName}</div>${scoreLine}<div class="tt-meta">${fmtStatus(m)}</div>`;
     tooltip.classList.add("show");
     moveTooltip(e);
   }
