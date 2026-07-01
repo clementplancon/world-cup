@@ -9,8 +9,21 @@
 <link rel="icon" href="./icons/icon-192.png">
 <link rel="apple-touch-icon" href="./icons/apple-touch-icon.png">
 <meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="Mondial 2026">
+
+<meta property="og:type" content="website">
+<meta property="og:title" content="Mondial 2026 — Arbre circulaire des phases finales">
+<meta property="og:description" content="Suis en direct le tableau à élimination directe de la Coupe du Monde 2026, présenté en cercle.">
+<meta property="og:image" content="https://clementplancon.github.io/world-cup/og-image.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="1200">
+<meta property="og:url" content="https://clementplancon.github.io/world-cup/">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="Mondial 2026 — Arbre circulaire des phases finales">
+<meta name="twitter:description" content="Suis en direct le tableau à élimination directe de la Coupe du Monde 2026, présenté en cercle.">
+<meta name="twitter:image" content="https://clementplancon.github.io/world-cup/og-image.png">
 <style>
   :root{
     --bg:#0a1512;
@@ -108,6 +121,15 @@
   .match-node.winner-home .home,
   .match-node.winner-away .away{ fill:var(--gold); }
 
+  @keyframes matchPing{
+    0%{ filter:drop-shadow(0 0 0 rgba(226,184,74,0)); }
+    25%{ filter:drop-shadow(0 0 14px rgba(226,184,74,.95)); }
+    100%{ filter:drop-shadow(0 0 0 rgba(226,184,74,0)); }
+  }
+  .match-node.ping .node-bg{
+    animation: matchPing 1.2s ease-out 2;
+  }
+
   .flag-bubble circle.ring{ fill:var(--panel); stroke:var(--line); stroke-width:1; }
   .flag-bubble image{ transition:filter .2s, opacity .2s; }
   .flag-bubble.eliminated image{ filter:grayscale(1); opacity:.4; }
@@ -148,13 +170,18 @@
   .chip .chip-close:hover{ color:var(--text); }
   #followChip{ display:none; border-color:rgba(226,184,74,.4); }
   #followChip .chip-label{ color:var(--gold); font-weight:600; }
-  #nextMatchChip{ display:none; }
+  #nextMatchChip{ display:none; cursor:pointer; }
   #nextMatchChip .chip-countdown{ color:var(--text); font-variant-numeric:tabular-nums; font-weight:700; }
   #nextMatchChip.is-live .chip-countdown{ color:var(--live); }
 
+  @media (max-width: 640px){
+    .chip-stack{ top:104px; right:10px; }
+    .chip{ max-width:min(70vw, 280px); font-size:11px; }
+  }
+
   .icon-fab{
     position:absolute;
-    bottom:14px; left:14px;
+    bottom:74px; left:14px;
     width:34px; height:34px;
     border-radius:9px;
     border:1px solid var(--line);
@@ -200,6 +227,10 @@
   .empty-card{ max-width:360px; pointer-events:auto; }
   .empty-card h2{ margin:0 0 8px; font-size:16px; letter-spacing:.01em; }
   .empty-card p{ margin:0 0 16px; font-size:13px; color:var(--text-dim); line-height:1.55; }
+  .empty-card button{
+    background:var(--gold); color:#1a1406; border:none;
+    padding:9px 16px; border-radius:9px; font-weight:700; font-size:13px; cursor:pointer;
+  }
 
   /* ---------- Legend (floating bottom bar) ---------- */
   .bottom-bar{
@@ -290,6 +321,7 @@
 
   @media (prefers-reduced-motion: reduce){
     #tooltip{ transition:none; }
+    .match-node.ping .node-bg{ animation:none; filter:drop-shadow(0 0 10px rgba(226,184,74,.9)); }
   }
 </style>
 </head>
@@ -317,8 +349,9 @@
     </button>
     <div class="empty-overlay" id="emptyOverlay">
       <div class="empty-card">
-        <h2>En attente de la première synchronisation</h2>
-        <p>Le robot GitHub Actions n'a pas encore alimenté <code>data/bracket.json</code>. Lance-le une fois manuellement depuis l'onglet Actions du repo (bouton « Run workflow »), ou attends jusqu'à 5 minutes après le premier push.</p>
+        <h2 id="emptyTitle">En attente de la première synchronisation</h2>
+        <p id="emptyText">Le robot GitHub Actions n'a pas encore alimenté <code>data/bracket.json</code>. Lance-le une fois manuellement depuis l'onglet Actions du repo (bouton « Run workflow »), ou attends jusqu'à 5 minutes après le premier push.</p>
+        <button id="retryBtn">Réessayer</button>
       </div>
     </div>
   </div>
@@ -380,6 +413,7 @@
   let rounds = [];
   let eliminated = new Set(); // team codes knocked out
   let followedCode = null; // team code the user is "following" (path highlight)
+  let hasPlayedEntrance = false; // only animate the very first time real data loads
 
   function computeEliminated(){
     eliminated = new Set();
@@ -475,8 +509,7 @@
         href:url, "xlink:href":url,
         x:x-r, y:y-r, width:r*2, height:r*2,
         preserveAspectRatio:"xMidYMid slice",
-        "clip-path": `url(#${uid})`,
-        crossorigin:"anonymous"
+        "clip-path": `url(#${uid})`
       }, g);
     } else {
       const t = el("text", {x, y:y+3, "text-anchor":"middle", "font-size":r, fill:"var(--text-faint)"}, g);
@@ -515,7 +548,8 @@
   }
 
   /* ============ Build tree geometry & render ============ */
-  function render(){
+  const ENTRANCE_STEP_MS = 170; // time between each round's reveal
+  function render(animateIn){
     svg.innerHTML = "";
     legendEl.innerHTML = "";
 
@@ -527,6 +561,28 @@
     computeEliminated();
     const pathInfo = followedCode ? computePath(followedCode) : null;
     const DIM = 0.15;
+
+    const revealQueue = []; // { el, prop, target } — flipped to target state on the next frame
+
+    // Fades a group in from invisible, after `delayMs`, to whatever opacity
+    // it was already going to have (path-dim state included).
+    function revealFade(node, delayMs){
+      if(!animateIn) return;
+      const target = node.style.opacity || "1";
+      node.style.opacity = "0";
+      node.style.transition = `opacity .32s ease-out ${delayMs}ms`;
+      revealQueue.push({ el:node, prop:"opacity", target });
+    }
+    // "Draws" a line/arc in via stroke-dasharray, like a pen tracing it.
+    function revealDraw(node, delayMs){
+      if(!animateIn) return;
+      let len;
+      try{ len = node.getTotalLength(); }catch(e){ len = 220; }
+      node.style.strokeDasharray = len;
+      node.style.strokeDashoffset = len;
+      node.style.transition = `stroke-dashoffset .42s ease-out ${delayMs}ms`;
+      revealQueue.push({ el:node, prop:"strokeDashoffset", target:"0" });
+    }
 
     const cx = 480, cy = 480;
     const outerR = 400;
@@ -563,15 +619,18 @@
 
     el("circle", {class:"ring-guide", cx, cy, r: outerR, style:"stroke:var(--line);stroke-width:1;opacity:.35"}, svg);
 
-    function pathEl(d, colorVar, opacity){
+    function pathEl(d, colorVar, onPath){
       const p = document.createElementNS(NS,"path");
       p.setAttribute("class","edge");
       p.setAttribute("d", d);
-      p.setAttribute("style", `stroke:var(${colorVar});stroke-width:3;opacity:${opacity==null?1:opacity}`);
+      const opacity = onPath ? 1 : DIM;
+      const width = onPath ? 3 : 1;
+      p.setAttribute("style", `stroke:var(${colorVar});stroke-width:${width};opacity:${opacity}`);
       return p;
     }
     function drawEdges(childAngles, childR, matches, parentAngles, parentR, colorVar, childRoundIdx){
       const parentRoundIdx = childRoundIdx + 1;
+      const delay = ENTRANCE_STEP_MS * (parentRoundIdx + 1);
       for(let i=0;i<matches.length;i++){
         const a1 = childAngles[i*2];
         const a2 = childAngles[i*2+1];
@@ -581,9 +640,13 @@
           const childOnPath = !pathInfo || (childRoundIdx === -1 ? pathInfo.leafIdx === childPos : pathInfo.matchIndices[childRoundIdx] === childPos);
           const p1 = polar(cx,cy,childR,a);
           const p2 = polar(cx,cy,parentR,a);
-          el("line", {class:"edge", x1:p1.x, y1:p1.y, x2:p2.x, y2:p2.y, style:`stroke:var(${colorVar});stroke-width:3;opacity:${childOnPath?1:DIM}`}, svg);
+          const width = childOnPath ? 3 : 1;
+          const lineEl = el("line", {class:"edge", x1:p1.x, y1:p1.y, x2:p2.x, y2:p2.y, style:`stroke:var(${colorVar});stroke-width:${width};opacity:${childOnPath?1:DIM}`}, svg);
+          revealDraw(lineEl, delay);
         });
-        svg.appendChild( pathEl(arcPath(cx,cy,parentR,a1,a2), colorVar, parentOnPath ? 1 : DIM) );
+        const arcElNode = pathEl(arcPath(cx,cy,parentR,a1,a2), colorVar, parentOnPath);
+        svg.appendChild(arcElNode);
+        revealDraw(arcElNode, delay);
       }
     }
 
@@ -601,30 +664,40 @@
         const flip = a >= 180; // bottom half of the circle: rotate 180° more so text isn't upside down
         const onPath = !pathInfo || pathInfo.leafIdx === idx;
         const flagP = polar(cx, cy, outerR + 10, a);
-        const flagG = drawFlag(svg, flagP.x, flagP.y, 9, team && team.code);
-        flagG.style.opacity = onPath ? 1 : DIM;
+        const labelP = polar(cx, cy, outerR + 24, a);
 
-        const p = polar(cx, cy, outerR + 24, a);
+        const leafG = el("g", {
+          class: "leaf-group",
+          style: `opacity:${onPath ? 1 : DIM};${team && team.code ? "cursor:pointer" : ""}`
+        }, svg);
+
+        // One generous invisible hit target covering flag + label together,
+        // so tapping the visible text works just as well as tapping the flag icon.
+        const hitCenter = polar(cx, cy, outerR + 17, a);
+        el("circle", {cx:hitCenter.x, cy:hitCenter.y, r:26, fill:"transparent"}, leafG);
+
+        const flagG = drawFlag(leafG, flagP.x, flagP.y, 9, team && team.code);
+
         const t = el("text", {
           class: "leaf-label" + (team && team.name ? "" : " empty") + (team && team.code && eliminated.has(team.code) ? " eliminated" : ""),
-          x: p.x, y: p.y,
+          x: labelP.x, y: labelP.y,
           "text-anchor": flip ? "end" : "start",
-          transform: `rotate(${a-90+(flip?180:0)}, ${p.x}, ${p.y})`,
-          style: `opacity:${onPath ? 1 : DIM}`
-        }, svg);
+          transform: `rotate(${a-90+(flip?180:0)}, ${labelP.x}, ${labelP.y})`
+        }, leafG);
         t.textContent = team && team.code ? team.code : "—";
+        revealFade(leafG, 0);
 
+        if(team && team.code){
+          leafG.addEventListener("click", (e)=>{ e.stopPropagation(); followTeam(team.code); });
+        }
         if(team && team.name){
-          const hitArea = el("circle", {cx:flagP.x, cy:flagP.y, r:22, fill:"transparent", style:"cursor:pointer"}, svg);
-          [flagG, t, hitArea].forEach(node=>{
-            node.addEventListener("mouseenter", (e)=>{
-              tooltip.innerHTML = `<div class="tt-teams">${team.name}</div>` + (eliminated.has(team.code) ? `<div class="tt-meta">Éliminé</div>` : "");
-              tooltip.classList.add("show");
-              moveTooltip(e);
-            });
-            node.addEventListener("mousemove", moveTooltip);
-            node.addEventListener("mouseleave", hideTooltip);
+          leafG.addEventListener("mouseenter", (e)=>{
+            tooltip.innerHTML = `<div class="tt-teams">${team.name}</div>` + (eliminated.has(team.code) ? `<div class="tt-meta">Éliminé</div>` : "");
+            tooltip.classList.add("show");
+            moveTooltip(e);
           });
+          leafG.addEventListener("mousemove", moveTooltip);
+          leafG.addEventListener("mouseleave", hideTooltip);
         }
       });
     }
@@ -650,10 +723,13 @@
                   (m.winner==="home" ? " winner-home" : "") +
                   (m.winner==="away" ? " winner-away" : ""),
           transform: `translate(${p.x - boxW/2}, ${p.y - boxH/2})`,
-          style: `opacity:${onPath ? 1 : DIM}`
+          style: `opacity:${onPath ? 1 : DIM}`,
+          "data-round": k,
+          "data-idx": i
         }, svg);
 
         el("rect", {class:"node-bg", x:0, y:0, width:boxW, height:boxH, rx:8, stroke: `var(${colorVar})`}, g);
+        revealFade(g, ENTRANCE_STEP_MS * (k + 1) + 180);
 
         const homeCode = m.home && m.home.code ? m.home.code : null;
         const awayCode = m.away && m.away.code ? m.away.code : null;
@@ -692,6 +768,18 @@
     } else {
       label.textContent = "FINALE";
     }
+    revealFade(badge, ENTRANCE_STEP_MS * (N + 1) + 220);
+
+    if(animateIn && revealQueue.length){
+      // Two frames: the first commits the "hidden" state to the page, the
+      // second flips everything to its target — this is what actually makes
+      // the CSS transitions (with their staggered delays) fire correctly.
+      requestAnimationFrame(()=>{
+        requestAnimationFrame(()=>{
+          revealQueue.forEach(({el:node, prop, target})=>{ node.style[prop] = target; });
+        });
+      });
+    }
   }
 
   /* ============ Tooltip ============ */
@@ -721,30 +809,57 @@
   function hideTooltip(){ tooltip.classList.remove("show"); }
 
   /* ============ Load static JSON ============ */
+  function setEmptyMessage(title, html){
+    const t = document.getElementById("emptyTitle");
+    const p = document.getElementById("emptyText");
+    if(t) t.textContent = title;
+    if(p) p.innerHTML = html;
+  }
+
   async function loadData(){
     try{
       const res = await fetch(DATA_URL + "?t=" + Date.now(), { cache: "no-store" });
       if(!res.ok) throw new Error("HTTP " + res.status);
       const data = await res.json();
       rounds = data.rounds || [];
-      render();
+      const shouldAnimate = !hasPlayedEntrance && rounds.length > 0;
+      if(!rounds.length){
+        setEmptyMessage(
+          "En attente de la première synchronisation",
+          "Le robot GitHub Actions n'a pas encore alimenté <code>data/bracket.json</code>. Lance-le une fois manuellement depuis l'onglet Actions du repo (bouton « Run workflow »), ou attends jusqu'à 5 minutes après le premier push."
+        );
+      }
+      render(shouldAnimate);
+      if(shouldAnimate) hasPlayedEntrance = true;
       updateFollowChip();
       refreshNextMatch();
     }catch(err){
       console.error(err);
+      if(!rounds.length){
+        setEmptyMessage(
+          "Impossible de récupérer les données",
+          "La requête vers <code>data/bracket.json</code> a échoué (réseau, fichier manquant, ou cache). Si le fichier existe bien sur GitHub avec du contenu, essaie de recharger la page en navigation privée pour écarter un souci de cache."
+        );
+        emptyOverlay.style.display = "flex";
+      }
     }
   }
+  document.getElementById("retryBtn").addEventListener("click", loadData);
 
   /* ============ Next match + countdown ============ */
   let nextMatchRef = null;
+  let nextMatchLoc = null; // { round, idx } — lets the chip locate the node in the circle
 
   function refreshNextMatch(){
-    const all = rounds.flat();
-    const live = all.find(m => m.status === "live");
+    const all = [];
+    rounds.forEach((round,k)=> round.forEach((m,i)=> all.push({m,k,i})));
+    const live = all.find(x => x.m.status === "live");
     const upcoming = all
-      .filter(m => m.status === "scheduled" && m.date)
-      .sort((a,b)=> new Date(a.date) - new Date(b.date))[0];
-    nextMatchRef = live || upcoming || null;
+      .filter(x => x.m.status === "scheduled" && x.m.date)
+      .sort((a,b)=> new Date(a.m.date) - new Date(b.m.date))[0];
+    const chosen = live || upcoming || null;
+    nextMatchRef = chosen ? chosen.m : null;
+    nextMatchLoc = chosen ? { round: chosen.k, idx: chosen.i } : null;
 
     const chip = document.getElementById("nextMatchChip");
     const img = document.getElementById("nextMatchFlag1");
@@ -760,6 +875,17 @@
     chip.style.display = "flex";
     tickCountdown();
   }
+
+  function pingNextMatch(){
+    if(!nextMatchLoc) return;
+    const node = svg.querySelector(`.match-node[data-round="${nextMatchLoc.round}"][data-idx="${nextMatchLoc.idx}"]`);
+    if(!node) return;
+    node.classList.remove("ping");
+    void node.offsetWidth; // restart the animation if it's already running
+    node.classList.add("ping");
+    setTimeout(()=> node.classList.remove("ping"), 2400);
+  }
+  document.getElementById("nextMatchChip").addEventListener("click", pingNextMatch);
 
   function tickCountdown(){
     const el2 = document.getElementById("nextMatchCountdown");
@@ -778,9 +904,20 @@
   setInterval(tickCountdown, 1000);
 
   /* ============ Export as PNG ============ */
+  async function fetchAsDataURL(url){
+    const res = await fetch(url, { mode:"cors" });
+    if(!res.ok) throw new Error("HTTP " + res.status);
+    const blob = await res.blob();
+    return new Promise((resolve, reject)=>{
+      const reader = new FileReader();
+      reader.onload = ()=> resolve(reader.result);
+      reader.onerror = reject;
+      reader.readAsDataURL(blob);
+    });
+  }
+
   async function exportPng(){
     const btn = document.getElementById("exportBtn");
-    const original = btn.innerHTML;
     try{
       btn.style.opacity = ".5";
       const size = 1600;
@@ -788,6 +925,12 @@
       clone.setAttribute("width", size);
       clone.setAttribute("height", size);
       clone.setAttribute("viewBox", "0 0 960 960");
+      // Required for the serialized markup to be valid standalone XML — without
+      // these, xlink:href on the flag <image> elements is an undefined
+      // namespace prefix once outside the HTML document, and the browser
+      // silently fails to parse/load the resulting SVG (img "error" event).
+      clone.setAttribute("xmlns", "http://www.w3.org/2000/svg");
+      clone.setAttribute("xmlns:xlink", "http://www.w3.org/1999/xlink");
 
       const bg = document.createElementNS(NS, "rect");
       bg.setAttribute("x","-40"); bg.setAttribute("y","-40");
@@ -795,12 +938,41 @@
       bg.setAttribute("fill","#0a1512");
       clone.insertBefore(bg, clone.firstChild);
 
+      // Embed the page's stylesheet inside the SVG itself. Standalone SVG
+      // documents (which is what this becomes once rasterized via <img>)
+      // don't have access to the host page's <style> — every var(--xxx)
+      // color used by class rules AND inline styles would otherwise fail to
+      // resolve, which is exactly what produced the all-black export. Since
+      // the stylesheet's ":root{...}" block becomes the SVG's own root once
+      // parsed standalone, copying it verbatim fixes every var() at once.
+      const styleEl = document.createElementNS(NS, "style");
+      styleEl.textContent = document.querySelector("style").textContent +
+        `\nsvg{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Inter,Helvetica,Arial,sans-serif;}`;
+      clone.insertBefore(styleEl, clone.firstChild);
+
+      // Inline every flag as base64 so the rasterized image has zero external
+      // references left — this is what actually avoids canvas tainting,
+      // rather than relying on flagcdn's CORS headers being respected by the
+      // browser's SVG image decoder (which many browsers don't do reliably).
+      const images = Array.from(clone.querySelectorAll("image"));
+      await Promise.all(images.map(async (imgEl)=>{
+        const href = imgEl.getAttribute("href") || imgEl.getAttribute("xlink:href");
+        if(!href || !href.startsWith("http")) return;
+        try{
+          const dataUrl = await fetchAsDataURL(href);
+          imgEl.setAttribute("href", dataUrl);
+          imgEl.setAttribute("xlink:href", dataUrl);
+        }catch(err){
+          console.warn("Drapeau non intégré à l'export (retiré, le reste du cercle reste exporté) :", href, err);
+          imgEl.remove();
+        }
+      }));
+
       const svgText = new XMLSerializer().serializeToString(clone);
       const svgBlob = new Blob([svgText], {type:"image/svg+xml;charset=utf-8"});
       const url = URL.createObjectURL(svgBlob);
 
       const img = new Image();
-      img.crossOrigin = "anonymous";
       await new Promise((resolve, reject)=>{ img.onload = resolve; img.onerror = reject; img.src = url; });
 
       const canvas = document.createElement("canvas");
@@ -818,7 +990,7 @@
       }, "image/png");
     }catch(err){
       console.error("Export PNG échoué :", err);
-      alert("L'export n'a pas fonctionné dans ce navigateur (probablement un blocage lié aux drapeaux hébergés ailleurs). Essaie une capture d'écran à la place.");
+      alert("L'export a échoué même après intégration des drapeaux en base64 — ouvre la console (F12) pour voir l'erreur exacte, ça m'aidera à corriger.");
     }finally{
       btn.style.opacity = "";
     }
@@ -835,7 +1007,6 @@
 
   function clampAndApply(){
     zoomState.scale = Math.min(MAX_SCALE, Math.max(MIN_SCALE, zoomState.scale));
-    if(zoomState.scale === 1){ zoomState.x = 0; zoomState.y = 0; }
     applyZoom();
   }
 
@@ -870,18 +1041,25 @@
   // Pointer-based pan + pinch (works for touch and mouse/pen alike).
   const activePointers = new Map();
   let pinchStartDist = 0, pinchStartScale = 1, panStart = null;
+  let pinchOccurred = false; // guards against a pinch-release being mistaken for a double-tap
+  const DRAG_THRESHOLD = 6; // px — below this, treat it as a tap/click, not a drag
 
   function dist(a, b){ return Math.hypot(a.x-b.x, a.y-b.y); }
   function midpoint(a, b){ return { x:(a.x+b.x)/2, y:(a.y+b.y)/2 }; }
 
   zoomWrap.addEventListener("pointerdown", (e)=>{
-    zoomWrap.setPointerCapture(e.pointerId);
     activePointers.set(e.pointerId, { x:e.clientX, y:e.clientY });
     zoomHint.classList.remove("show");
     if(activePointers.size === 1){
-      panStart = { x:e.clientX, y:e.clientY, ox:zoomState.x, oy:zoomState.y };
-      zoomWrap.classList.add("dragging");
+      pinchOccurred = false; // start of a fresh gesture
+      // Don't capture yet — a stationary tap needs to reach the actual
+      // element underneath (e.g. a flag) so its click handler still fires.
+      panStart = { x:e.clientX, y:e.clientY, ox:zoomState.x, oy:zoomState.y, captured:false, pointerId:e.pointerId };
     } else if(activePointers.size === 2){
+      pinchOccurred = true;
+      // Capture both fingers so a pinch stays tracked even if one drifts
+      // over another UI element (zoom buttons, export button, etc.).
+      for(const id of activePointers.keys()) zoomWrap.setPointerCapture(id);
       const pts = [...activePointers.values()];
       pinchStartDist = dist(pts[0], pts[1]);
       pinchStartScale = zoomState.scale;
@@ -901,8 +1079,16 @@
         zoomAt(mid.x, mid.y, pinchStartScale * (d / pinchStartDist));
       }
     } else if(activePointers.size === 1 && panStart){
-      zoomState.x = panStart.ox + (e.clientX - panStart.x);
-      zoomState.y = panStart.oy + (e.clientY - panStart.y);
+      const dx = e.clientX - panStart.x;
+      const dy = e.clientY - panStart.y;
+      if(!panStart.captured){
+        if(Math.hypot(dx,dy) < DRAG_THRESHOLD) return; // still just a potential tap
+        panStart.captured = true;
+        zoomWrap.setPointerCapture(panStart.pointerId);
+        zoomWrap.classList.add("dragging");
+      }
+      zoomState.x = panStart.ox + dx;
+      zoomState.y = panStart.oy + dy;
       applyZoom();
     }
   });
@@ -921,8 +1107,12 @@
   let lastTap = 0;
   zoomWrap.addEventListener("pointerup", (e)=>{
     const now = Date.now();
-    if(now - lastTap < 300 && activePointers.size === 0){
-      zoomAt(e.clientX, e.clientY, zoomState.scale > 1.2 ? 1 : 2.5);
+    if(now - lastTap < 300 && activePointers.size === 0 && !pinchOccurred){
+      if(zoomState.scale > 1.2){
+        zoomState.scale = 1; zoomState.x = 0; zoomState.y = 0; applyZoom();
+      } else {
+        zoomAt(e.clientX, e.clientY, 2.5);
+      }
     }
     lastTap = now;
   });
