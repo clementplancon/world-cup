@@ -173,6 +173,7 @@
   #nextMatchChip{ display:none; cursor:pointer; }
   #nextMatchChip .chip-countdown{ color:var(--text); font-variant-numeric:tabular-nums; font-weight:700; }
   #nextMatchChip.is-live .chip-countdown{ color:var(--live); }
+  #nextMatchChip .chip-score{ color:var(--text); font-weight:700; font-variant-numeric:tabular-nums; }
 
   @media (max-width: 640px){
     .chip-stack{ top:104px; right:10px; }
@@ -361,6 +362,8 @@
   <div class="chip" id="nextMatchChip">
     <img id="nextMatchFlag1" src="" alt="" style="display:none">
     <span class="chip-label" id="nextMatchLabel"></span>
+    <img id="nextMatchFlag2" src="" alt="" style="display:none">
+    <span class="chip-score" id="nextMatchScore"></span>
     <span class="chip-countdown" id="nextMatchCountdown"></span>
   </div>
   <div class="chip" id="followChip">
@@ -862,15 +865,20 @@
     nextMatchLoc = chosen ? { round: chosen.k, idx: chosen.i } : null;
 
     const chip = document.getElementById("nextMatchChip");
-    const img = document.getElementById("nextMatchFlag1");
+    const img1 = document.getElementById("nextMatchFlag1");
+    const img2 = document.getElementById("nextMatchFlag2");
     const label = document.getElementById("nextMatchLabel");
     if(!nextMatchRef){ chip.style.display = "none"; return; }
 
     const homeName = nextMatchRef.home && nextMatchRef.home.name ? nextMatchRef.home.name : "?";
     const awayName = nextMatchRef.away && nextMatchRef.away.name ? nextMatchRef.away.name : "?";
     label.textContent = `${homeName} – ${awayName}`;
-    const url = nextMatchRef.home && flagUrl(nextMatchRef.home.code);
-    if(url){ img.src = url; img.style.display = "block"; } else { img.style.display = "none"; }
+
+    const url1 = nextMatchRef.home && flagUrl(nextMatchRef.home.code);
+    if(url1){ img1.src = url1; img1.style.display = "block"; } else { img1.style.display = "none"; }
+    const url2 = nextMatchRef.away && flagUrl(nextMatchRef.away.code);
+    if(url2){ img2.src = url2; img2.style.display = "block"; } else { img2.style.display = "none"; }
+
     chip.classList.toggle("is-live", nextMatchRef.status === "live");
     chip.style.display = "flex";
     tickCountdown();
@@ -889,8 +897,16 @@
 
   function tickCountdown(){
     const el2 = document.getElementById("nextMatchCountdown");
+    const scoreEl = document.getElementById("nextMatchScore");
     if(!nextMatchRef){ return; }
-    if(nextMatchRef.status === "live"){ el2.textContent = "🔴 En direct"; return; }
+    if(nextMatchRef.status === "live"){
+      el2.textContent = "🔴 En direct";
+      const hs = nextMatchRef.score && nextMatchRef.score.home!=null ? nextMatchRef.score.home : 0;
+      const as = nextMatchRef.score && nextMatchRef.score.away!=null ? nextMatchRef.score.away : 0;
+      scoreEl.textContent = `${hs} – ${as}`;
+      return;
+    }
+    scoreEl.textContent = "";
     if(!nextMatchRef.date){ el2.textContent = ""; return; }
     const diff = new Date(nextMatchRef.date).getTime() - Date.now();
     if(diff <= 0){ el2.textContent = "⏱ Coup d'envoi…"; return; }
