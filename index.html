@@ -1179,6 +1179,14 @@
 
   function clampAndApply(){
     zoomState.scale = Math.min(MAX_SCALE, Math.max(MIN_SCALE, zoomState.scale));
+    // Keep the panning within bounds so the chart can never be dragged
+    // fully off-screen (which would make it impossible to recover, since
+    // the stage clips overflow and the drag/pinch target would be gone).
+    const rect = zoomWrap.parentElement.getBoundingClientRect();
+    const maxX = Math.max(0, (zoomState.scale - 1) * rect.width / 2);
+    const maxY = Math.max(0, (zoomState.scale - 1) * rect.height / 2);
+    zoomState.x = Math.min(maxX, Math.max(-maxX, zoomState.x));
+    zoomState.y = Math.min(maxY, Math.max(-maxY, zoomState.y));
     applyZoom();
   }
 
@@ -1261,7 +1269,7 @@
       }
       zoomState.x = panStart.ox + dx;
       zoomState.y = panStart.oy + dy;
-      applyZoom();
+      clampAndApply();
     }
   });
 
