@@ -1153,19 +1153,57 @@
       ctx.drawImage(img, 0, 0, size, size);
       URL.revokeObjectURL(url);
 
-      canvas.toBlob((blob)=>{
-        if(!blob){ throw new Error("toBlob failed"); }
-        const a = document.createElement("a");
-        a.href = URL.createObjectURL(blob);
-        a.download = "mondial-2026-arbre.png";
-        a.click();
-      }, "image/png");
+      await new Promise((resolve, reject)=>{
+        canvas.toBlob(async (blob)=>{
+          try{
+            if(!blob){ throw new Error("toBlob failed"); }
+            await saveOrSharePng(blob);
+            resolve();
+          }catch(err){ reject(err); }
+        }, "image/png");
+      });
     }catch(err){
       console.error("Export PNG échoué :", err);
       alert("L'export a échoué même après intégration des drapeaux en base64 — ouvre la console (F12) pour voir l'erreur exacte, ça m'aidera à corriger.");
     }finally{
       btn.style.opacity = "";
     }
+  }
+
+  // Mobile "in-app" browsers (Instagram, Facebook, TikTok, LinkedIn...) run
+  // pages inside a WebView that often silently ignores the `download`
+  // attribute on <a> — the click does nothing visible, which is exactly the
+  // bug reported. The Web Share API (available in most of these WebViews)
+  // hands the file off to the OS share sheet, letting the user save it to
+  // their photos from there. When that API isn't available we fall back to
+  // the classic download link, then additionally open the image in a new
+  // tab so the user can still save it manually (e.g. long-press > "Save
+  // image") if the download attribute was ignored.
+  async function saveOrSharePng(blob){
+    const fileName = "mondial-2026-arbre.png";
+    try{
+      const file = new File([blob], fileName, { type:"image/png" });
+      if(navigator.canShare && navigator.canShare({ files:[file] })){
+        await navigator.share({ files:[file], title:"Mondial 2026" });
+        return;
+      }
+    }catch(shareErr){
+      if(shareErr && shareErr.name === "AbortError") return; // user cancelled the share sheet
+      console.warn("Partage natif indisponible, tentative de téléchargement classique :", shareErr);
+    }
+
+    const blobUrl = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = blobUrl;
+    a.download = fileName;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+
+    // Fallback for in-app browsers that ignore the download attribute:
+    // open the image in a new tab so it can still be saved manually.
+    setTimeout(()=>{ window.open(blobUrl, "_blank"); }, 150);
+    setTimeout(()=>{ URL.revokeObjectURL(blobUrl); }, 60000);
   }
   document.getElementById("exportBtn").addEventListener("click", exportPng);
 
