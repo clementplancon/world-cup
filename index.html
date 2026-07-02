@@ -303,6 +303,13 @@
     font-size:11px; color:var(--text-dim);
   }
   .legend-dot{ width:8px;height:8px;border-radius:50%; }
+  .probability-note{
+    color:var(--text-faint);
+    font-size:10.5px;
+    line-height:1.35;
+    text-align:center;
+    max-width:min(720px, 92vw);
+  }
 
   /* ---------- Pinch / pan zoom ---------- */
   #zoomWrap{
@@ -427,6 +434,7 @@
 
 <div class="bottom-bar">
   <div class="legend" id="legend"></div>
+  <div class="probability-note" id="probabilityNote"></div>
 </div>
 
 <div id="tooltip"></div>
@@ -461,6 +469,7 @@
       recentMatches:"Derniers matchs", goals:"Buts", assistsShort:"Passes", played:"J", wins:"V", draws:"N", losses:"D", diff:"Diff",
       close:"Fermer", noStats:"Statistiques pas encore disponibles.", statsUpdated:"Mis à jour",
       dIn:"dans", jShort:"j", hShort:"h", minShort:"min",
+      probabilityNote:"Pourcentages = estimation de victoire calculée avec une note pondérée (Elo 60 %, classement FIFA 25 %, forme récente 15 %), puis limitée entre 5 % et 95 %.",
     },
     en: {
       headerTitle:"2026 World Cup", headerSubtitle:"· Knockout stage",
@@ -481,6 +490,7 @@
       recentMatches:"Recent matches", goals:"Goals", assistsShort:"Assists", played:"P", wins:"W", draws:"D", losses:"L", diff:"Diff",
       close:"Close", noStats:"Stats not available yet.", statsUpdated:"Updated",
       dIn:"in", jShort:"d", hShort:"h", minShort:"m",
+      probabilityNote:"Percentages are win estimates based on a weighted rating (Elo 60%, FIFA ranking 25%, recent form 15%), then capped between 5% and 95%.",
     },
     es: {
       headerTitle:"Mundial 2026", headerSubtitle:"· Fase final",
@@ -501,6 +511,7 @@
       recentMatches:"Últimos partidos", goals:"Goles", assistsShort:"Asist.", played:"J", wins:"G", draws:"E", losses:"P", diff:"Dif",
       close:"Cerrar", noStats:"Estadísticas aún no disponibles.", statsUpdated:"Actualizado",
       dIn:"en", jShort:"d", hShort:"h", minShort:"min",
+      probabilityNote:"Los porcentajes son estimaciones de victoria basadas en una valoración ponderada (Elo 60 %, ranking FIFA 25 %, forma reciente 15 %) y limitadas entre 5 % y 95 %.",
     },
   };
   let lang = localStorage.getItem("wc2026-lang") || "fr";
@@ -1392,6 +1403,7 @@
     document.getElementById("zoomHint").textContent = t("zoomHint");
     document.getElementById("installBtnLabel").textContent = t("installBtn");
     document.getElementById("exportBtnLabel").textContent = t("exportBtn");
+    document.getElementById("probabilityNote").textContent = t("probabilityNote");
     document.getElementById("retryBtn").textContent = t("retry");
     document.documentElement.lang = lang;
     if(!rounds.length){
