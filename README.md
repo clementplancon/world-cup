@@ -97,14 +97,77 @@ navigateur sans `EventSource`). Le `service-worker.js` laisse passer le flux
 `/events` sans l'intercepter (une réponse streaming ne doit pas être mise en
 cache).
 
+## Notifications push (Web Push) — Phase 2
+
+Le serveur peut envoyer une **notification navigateur** aux personnes qui
+suivent une équipe, au **coup d'envoi** et à la **fin** de chacun de ses matchs
+(volontairement **pas** sur les buts, pour éviter le spam — ceux-ci restent
+diffusés en SSE sur la page ouverte).
+
+- **`lib/push.js`** : stocke les abonnements dans `data/subscriptions.json`
+  (`[{ endpoint, keys, followedTeam }]`, pas de base de données), les ajoute /
+  supprime, et envoie les notifications avec `web-push`. Un endpoint mort
+  (`410`/`404`) est automatiquement purgé.
+- **`GET /api/vapid-public-key`** : clé publique VAPID en texte brut, nécessaire
+  au `pushManager.subscribe()` côté navigateur.
+- **`POST /api/subscribe`** : body `{ endpoint, keys, followedTeam }`.
+- **`POST /api/unsubscribe`** : body `{ endpoint }`.
+- Les endpoints `/api/*` sont **publics par design** (pas d'authentification).
+
+Générer les clés VAPID **une seule fois** puis les renseigner dans `.env`
+(`VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY`, `VAPID_CONTACT_EMAIL`) :
+
+```bash
+npx web-push generate-vapid-keys
+```
+
+Sans clés VAPID, le serveur démarre normalement mais le push est simplement
+désactivé.
+
+Côté front, le `service-worker.js` écoute `push` (`showNotification`) et
+`notificationclick` (focus/ouverture de l'app), et un bouton 🔔 sur la puce de
+suivi demande la permission, s'abonne via `pushManager.subscribe`, puis appelle
+`POST /api/subscribe` avec l'équipe suivie. L'équipe suivie est mémorisée en
+`localStorage` afin que l'abonnement survive à un rechargement.
+
+## Image de partage dynamique (OG image) — Phase 3
+
+Le serveur régénère toutes les 15 minutes une capture de l'arbre en cours, servie
+comme image OpenGraph / Twitter pour que les partages sociaux montrent un tableau
+à jour.
+
+- **`lib/ogImage.js`** : Puppeteer ouvre `SITE_URL`, attend le rendu de l'arbre
+  (`#bracket .match-node`) et capture `#bracket` dans `public/og-image.png`.
+  Tout est encapsulé dans un try/catch : une génération ratée ne crashe jamais le
+  serveur et ne supprime jamais l'image précédente (écriture atomique via un
+  fichier temporaire).
+- **`GET /og-image.png`** : sert l'image avec `Cache-Control: public, max-age=600`
+  (et non `no-cache` comme `bracket.json`) — on **veut** que les crawlers sociaux
+  la mettent en cache plutôt que de la re-télécharger à chaque partage.
+- Côté front (`index.html`), `og:image` / `twitter:image` pointent vers
+  `https://world-cup-data.pointvirgule.dev/og-image.png`.
+
+> **Limite connue (pas un bug à corriger).** Facebook / X / Discord mettent
+> l'aperçu en cache **par URL, côté plateforme**, parfois plusieurs heures. Un
+> lien déjà partagé peut donc rester périmé sans action manuelle côté plateforme
+> (ex. Facebook Sharing Debugger pour forcer un nouveau scrape).
+
 ### Installation sur le serveur (`/opt/world-cup-data`)
 
 ```bash
-npm install                     # express, dotenv, cors
-cp .env.example .env            # puis renseigner FOOTBALL_DATA_API_KEY, PORT, PUBLIC_ORIGIN
+npm install                     # express, dotenv, cors, web-push, puppeteer
+cp .env.example .env            # renseigner FOOTBALL_DATA_API_KEY, PORT, PUBLIC_ORIGIN,
+                                # puis (Phase 2) VAPID_*, et (Phase 3) SITE_URL
+npx web-push generate-vapid-keys  # une fois — copier les clés dans .env
 pm2 start ecosystem.config.js   # instances: 1 — NE PAS clusteriser (état en mémoire)
 pm2 logs world-cup-data         # doit montrer des fetchs réguliers
 ```
+
+> **Puppeteer / Chromium.** La Phase 3 lance un Chromium headless. Sur un VPS
+> minimal, installer les bibliothèques système requises (par ex.
+> `libnss3 libatk-bridge2.0-0 libgtk-3-0 libasound2`, etc.) et laisser
+> `puppeteer` télécharger son Chromium à `npm install`. Le lancement utilise
+> `--no-sandbox` pour tourner sous un utilisateur de service.
 
 > **Une seule instance.** L'état en mémoire (clients SSE, voir Phase 1) impose
 > `instances: 1` dans PM2. Ne jamais passer en cluster sans pub/sub partagé.
