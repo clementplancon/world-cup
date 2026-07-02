@@ -41,6 +41,7 @@
     --r3:#c9b354;
     --r4:#dd8f4a;
     --r5:#e0555f;
+    --bottom-bar-height:74px;
   }
   *{box-sizing:border-box;}
   html,body{margin:0;padding:0;height:100%;overflow:hidden;}
@@ -101,7 +102,7 @@
   /* ---------- Bracket wrap (full-viewport canvas) ---------- */
   main{
     position:fixed;
-    inset:0;
+    inset:0 0 var(--bottom-bar-height);
     z-index:1;
   }
   .stage{
@@ -206,7 +207,7 @@
 
   .action-stack{
     position:absolute;
-    bottom:74px; left:14px;
+    bottom:14px; left:14px;
     display:flex;
     flex-direction:column;
     gap:8px;
@@ -286,7 +287,7 @@
     backdrop-filter:blur(10px);
     -webkit-backdrop-filter:blur(10px);
     border-top:1px solid var(--line);
-    padding:10px 16px;
+    padding:10px 16px calc(10px + env(safe-area-inset-bottom));
     display:flex;
     flex-direction:column;
     align-items:center;
@@ -320,7 +321,7 @@
   #zoomWrap.dragging{ cursor:grabbing; }
   .zoom-controls{
     position:absolute;
-    bottom:74px; right:14px;
+    bottom:14px; right:14px;
     display:flex; flex-direction:column;
     gap:6px;
     z-index:15;
@@ -624,6 +625,17 @@
   const zoomWrap = document.getElementById("zoomWrap");
   const zoomHint = document.getElementById("zoomHint");
   const tooltip = document.getElementById("tooltip");
+  const bottomBar = document.querySelector(".bottom-bar");
+
+  function updateBottomBarOffset(){
+    if(!bottomBar) return;
+    const height = Math.ceil(bottomBar.getBoundingClientRect().height);
+    document.documentElement.style.setProperty("--bottom-bar-height", height + "px");
+  }
+  if("ResizeObserver" in window && bottomBar){
+    new ResizeObserver(updateBottomBarOffset).observe(bottomBar);
+  }
+  window.addEventListener("resize", updateBottomBarOffset);
 
   const NS = "http://www.w3.org/2000/svg";
   function el(tag, attrs, parent){
@@ -1425,6 +1437,7 @@
     setLang(next);
   });
   applyStaticTranslations();
+  updateBottomBarOffset();
 
 })();
 </script>
