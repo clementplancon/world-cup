@@ -193,6 +193,13 @@
     cursor:pointer; font-size:14px; line-height:1; padding:2px; flex:none;
   }
   .chip .chip-close:hover{ color:var(--text); }
+  .chip .chip-notify{
+    background:none; border:none; cursor:pointer; font-size:14px; line-height:1;
+    padding:2px; flex:none; opacity:.85;
+  }
+  .chip .chip-notify:hover{ opacity:1; }
+  .chip .chip-notify.is-on{ opacity:1; filter:drop-shadow(0 0 3px var(--gold)); }
+  .chip .chip-notify[disabled]{ opacity:.35; cursor:default; }
   #followChip{ display:none; border-color:rgba(226,184,74,.4); }
   #followChip .chip-label{ color:var(--gold); font-weight:600; }
   #nextMatchChip{ display:none; cursor:pointer; }
@@ -429,6 +436,7 @@
   <div class="chip" id="followChip">
     <img id="followFlag" src="" alt="" style="display:none">
     <span class="chip-label" id="followLabel"></span>
+    <button class="chip-notify" id="followNotifyBtn" title="Activer les notifications">🔔</button>
     <button class="chip-close" id="followClearBtn" title="Ne plus suivre">✕</button>
   </div>
 </div>
@@ -457,6 +465,9 @@
       round32:"32es de finale", round16:"8es de finale", roundQF:"Quarts de finale", roundSF:"Demi-finales", roundF:"Finale",
       statusFinal:"Terminé", statusLive:"En direct", eliminated:"Éliminé", estimate:"estimation",
       following:"Suivi : ",
+      notifyEnable:"🔔 Activer les notifications", notifyEnabled:"🔔 Notifications activées",
+      notifyBlocked:"Notifications bloquées dans le navigateur", notifyUnsupported:"Notifications non supportées sur cet appareil",
+      notifyError:"Impossible d'activer les notifications",
       zoomHint:"Pince ou molette pour zoomer",
       installBtn:"Installer l'application", exportBtn:"Télécharger l'image",
       iosInstall:"Pour installer : appuie sur le bouton Partager de Safari (le carré avec une flèche), puis « Sur l'écran d'accueil ».",
@@ -479,6 +490,9 @@
       round32:"Round of 32", round16:"Round of 16", roundQF:"Quarter-finals", roundSF:"Semi-finals", roundF:"Final",
       statusFinal:"Finished", statusLive:"Live", eliminated:"Eliminated", estimate:"estimate",
       following:"Following: ",
+      notifyEnable:"🔔 Enable notifications", notifyEnabled:"🔔 Notifications on",
+      notifyBlocked:"Notifications blocked in the browser", notifyUnsupported:"Notifications not supported on this device",
+      notifyError:"Couldn't enable notifications",
       zoomHint:"Pinch or scroll to zoom",
       installBtn:"Install app", exportBtn:"Download image",
       iosInstall:"To install: tap Safari's Share button (the square with an arrow), then \"Add to Home Screen\".",
@@ -501,6 +515,9 @@
       round32:"Dieciseisavos", round16:"Octavos de final", roundQF:"Cuartos de final", roundSF:"Semifinales", roundF:"Final",
       statusFinal:"Finalizado", statusLive:"En vivo", eliminated:"Eliminado", estimate:"estimación",
       following:"Siguiendo: ",
+      notifyEnable:"🔔 Activar notificaciones", notifyEnabled:"🔔 Notificaciones activas",
+      notifyBlocked:"Notificaciones bloqueadas en el navegador", notifyUnsupported:"Notificaciones no compatibles en este dispositivo",
+      notifyError:"No se pudieron activar las notificaciones",
       zoomHint:"Pellizca o usa la rueda para hacer zoom",
       installBtn:"Instalar la aplicación", exportBtn:"Descargar imagen",
       iosInstall:"Para instalar: toca el botón Compartir de Safari (el cuadrado con una flecha) y luego «Añadir a pantalla de inicio».",
@@ -548,7 +565,7 @@
   /* ============ STATE ============ */
   let rounds = [];
   let eliminated = new Set(); // team codes knocked out
-  let followedCode = null; // team code the user is "following" (path highlight)
+  let followedCode = localStorage.getItem("wc2026-follow") || null; // team the user is "following" (path highlight + push)
   let hasPlayedEntrance = false; // only animate the very first time real data loads
 
   function computeEliminated(){
@@ -593,10 +610,19 @@
     return { leafIdx, matchIndices, eliminatedRound };
   }
 
+  function setFollowedCode(code){
+    followedCode = code;
+    if(code){ localStorage.setItem("wc2026-follow", code); }
+    else { localStorage.removeItem("wc2026-follow"); }
+  }
+
   function followTeam(code){
-    followedCode = (followedCode === code) ? null : code;
+    setFollowedCode(followedCode === code ? null : code);
     render();
     updateFollowChip();
+    // A newly followed team should push notifications there too, if the user
+    // already opted in — re-subscribe so the server points at the new team.
+    if(followedCode && notificationsEnabled()){ subscribePush(followedCode).catch(()=>{}); }
   }
 
   function updateFollowChip(){
@@ -608,6 +634,7 @@
     if(url){ img.src = url; img.style.display = "block"; } else { img.style.display = "none"; }
     label.textContent = t("following") + getTeamName(followedCode);
     chip.style.display = "flex";
+    updateNotifyButton();
   }
   function getTeamName(code){
     // Pull the display name from whatever's currently loaded, falling back to the code itself.
@@ -619,7 +646,84 @@
     }
     return code;
   }
-  document.getElementById("followClearBtn").addEventListener("click", ()=>{ followedCode = null; render(); updateFollowChip(); });
+  document.getElementById("followClearBtn").addEventListener("click", ()=>{ setFollowedCode(null); render(); updateFollowChip(); });
+
+  /* ============ Web Push notifications (Phase 2) ============ */
+  // The data server (same origin as DATA_URL) can send a system notification to
+  // the followers of a team on kickoff and full-time. The user opts in per
+  // browser via the 🔔 button on the follow chip.
+  const API_BASE = DATA_URL.replace(/\/bracket\.json$/, "");
+
+  function pushSupported(){
+    return ("serviceWorker" in navigator) && ("PushManager" in window) && ("Notification" in window);
+  }
+  function notificationsEnabled(){
+    return pushSupported() && Notification.permission === "granted";
+  }
+
+  // Standard conversion of a base64url VAPID key into the Uint8Array that
+  // pushManager.subscribe() expects as applicationServerKey.
+  function urlBase64ToUint8Array(base64String){
+    const padding = "=".repeat((4 - base64String.length % 4) % 4);
+    const base64 = (base64String + padding).replace(/-/g, "+").replace(/_/g, "/");
+    const raw = atob(base64);
+    const output = new Uint8Array(raw.length);
+    for(let i=0;i<raw.length;i++){ output[i] = raw.charCodeAt(i); }
+    return output;
+  }
+
+  // Subscribe (or re-subscribe) this browser for the given team and register it
+  // with the server. Reuses the existing PushSubscription if the browser already
+  // has one, so switching the followed team just updates followedTeam server-side.
+  async function subscribePush(teamCode){
+    if(!teamCode || !pushSupported()) return false;
+    const reg = await navigator.serviceWorker.ready;
+    let sub = await reg.pushManager.getSubscription();
+    if(!sub){
+      const keyRes = await fetch(API_BASE + "/api/vapid-public-key");
+      const publicKey = (await keyRes.text()).trim();
+      if(!publicKey) throw new Error("No VAPID public key");
+      sub = await reg.pushManager.subscribe({
+        userVisibleOnly: true,
+        applicationServerKey: urlBase64ToUint8Array(publicKey),
+      });
+    }
+    const json = sub.toJSON();
+    await fetch(API_BASE + "/api/subscribe", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ endpoint: sub.endpoint, keys: json.keys, followedTeam: teamCode }),
+    });
+    return true;
+  }
+
+  async function enableNotifications(){
+    if(!followedCode) return;
+    if(!pushSupported()){ alert(t("notifyUnsupported")); return; }
+    if(Notification.permission === "denied"){ alert(t("notifyBlocked")); return; }
+    try{
+      const permission = await Notification.requestPermission();
+      if(permission !== "granted"){ updateNotifyButton(); return; }
+      await subscribePush(followedCode);
+      updateNotifyButton();
+    }catch(err){
+      console.error("enableNotifications failed:", err);
+      alert(t("notifyError"));
+    }
+  }
+
+  function updateNotifyButton(){
+    const btn = document.getElementById("followNotifyBtn");
+    if(!btn) return;
+    if(!pushSupported()){ btn.style.display = "none"; return; }
+    btn.style.display = "inline-flex";
+    const enabled = notificationsEnabled();
+    const blocked = Notification.permission === "denied";
+    btn.classList.toggle("is-on", enabled);
+    btn.disabled = blocked;
+    btn.title = enabled ? t("notifyEnabled") : (blocked ? t("notifyBlocked") : t("notifyEnable"));
+  }
+  document.getElementById("followNotifyBtn").addEventListener("click", enableNotifications);
 
   /* ============ DOM ============ */
   const svg = document.getElementById("bracket");
@@ -1501,7 +1605,15 @@
 
   if("serviceWorker" in navigator){
     window.addEventListener("load", ()=>{
-      navigator.serviceWorker.register("./service-worker.js").catch(err=> console.warn("SW registration failed:", err));
+      navigator.serviceWorker.register("./service-worker.js")
+        .then(()=>{
+          // If the user already opted into notifications and follows a team,
+          // refresh the server-side subscription (endpoints can rotate and the
+          // server may have restarted) so pushes keep flowing.
+          if(followedCode && notificationsEnabled()){ subscribePush(followedCode).catch(()=>{}); }
+          updateNotifyButton();
+        })
+        .catch(err=> console.warn("SW registration failed:", err));
     });
   }
 
