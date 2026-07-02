@@ -1054,20 +1054,26 @@
     if(textEl) textEl.innerHTML = html;
   }
 
+  // Apply a freshly received bracket payload to the UI. Shared by the periodic
+  // fetch() fallback and the SSE stream so both paths render identically.
+  function applyBracket(data){
+    rounds = (data && data.rounds) || [];
+    const shouldAnimate = !hasPlayedEntrance && rounds.length > 0;
+    if(!rounds.length){
+      setEmptyMessage(t("emptyWaitTitle"), t("emptyWaitText"));
+    }
+    render(shouldAnimate);
+    if(shouldAnimate) hasPlayedEntrance = true;
+    updateFollowChip();
+    refreshNextMatch();
+  }
+
   async function loadData(){
     try{
       const res = await fetch(DATA_URL + "?t=" + Date.now(), { cache: "no-store" });
       if(!res.ok) throw new Error("HTTP " + res.status);
       const data = await res.json();
-      rounds = data.rounds || [];
-      const shouldAnimate = !hasPlayedEntrance && rounds.length > 0;
-      if(!rounds.length){
-        setEmptyMessage(t("emptyWaitTitle"), t("emptyWaitText"));
-      }
-      render(shouldAnimate);
-      if(shouldAnimate) hasPlayedEntrance = true;
-      updateFollowChip();
-      refreshNextMatch();
+      applyBracket(data);
     }catch(err){
       console.error(err);
       if(!rounds.length){
@@ -1077,6 +1083,30 @@
     }
   }
   document.getElementById("retryBtn").addEventListener("click", loadData);
+
+  /* ============ Real-time updates (SSE) ============ */
+  // The persistent data server pushes bracket changes over Server-Sent Events,
+  // so a score update lands in a few seconds instead of waiting for the next
+  // poll. We keep the periodic fetch() above as a safety net in case the stream
+  // drops (proxy timeout, server restart, browser without EventSource, ...).
+  let sseSource = null;
+  function connectEvents(){
+    if(!("EventSource" in window)) return;
+    try{
+      // Derive the /events endpoint from DATA_URL (same origin, different path).
+      const eventsUrl = DATA_URL.replace(/\/bracket\.json$/, "/events");
+      sseSource = new EventSource(eventsUrl);
+      sseSource.addEventListener("update", (e)=>{
+        try{ applyBracket(JSON.parse(e.data)); }
+        catch(err){ console.error("Bad SSE payload:", err); }
+      });
+      // On error EventSource reconnects on its own; the fetch() fallback covers
+      // the gap in the meantime, so nothing more is needed here.
+      sseSource.addEventListener("error", ()=>{ /* auto-reconnect handled by browser */ });
+    }catch(err){
+      console.warn("SSE unavailable, falling back to polling only:", err);
+    }
+  }
 
   /* ============ Next match + countdown ============ */
   let nextMatchRef = null;
@@ -1467,6 +1497,7 @@
   render();
   loadData();
   setInterval(loadData, AUTO_REFRESH_MS);
+  connectEvents();
 
   if("serviceWorker" in navigator){
     window.addEventListener("load", ()=>{

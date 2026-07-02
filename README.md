@@ -89,9 +89,13 @@ secondes, sans attendre le prochain `fetch()`.
 > `instances: 1` : un second worker aurait sa propre liste et n'enverrait jamais
 > les événements diffusés par l'autre.
 
-Côté front (hors périmètre de ce repo serveur), s'abonner via
-`new EventSource(DATA_URL_ORIGIN + "/events")`, écouter l'événement `update`, et
-conserver le `fetch()` périodique existant comme filet de secours.
+Côté front (`index.html`), on s'abonne via
+`new EventSource(<origine du serveur>/events)`, on écoute l'événement `update`
+pour re-render immédiatement, et on conserve le `fetch()` périodique existant
+comme filet de secours si le flux tombe (timeout proxy, redémarrage serveur,
+navigateur sans `EventSource`). Le `service-worker.js` laisse passer le flux
+`/events` sans l'intercepter (une réponse streaming ne doit pas être mise en
+cache).
 
 ### Installation sur le serveur (`/opt/world-cup-data`)
 

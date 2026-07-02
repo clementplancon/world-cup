@@ -31,6 +31,14 @@ self.addEventListener("activate", (event) => {
 self.addEventListener("fetch", (event) => {
   const url = new URL(event.request.url);
 
+  // Server-Sent Events stream (real-time bracket updates): never intercept it.
+  // It's a long-lived streaming response — trying to cache/clone it would break
+  // the connection. Let the browser talk to the network directly.
+  if (url.pathname === "/events" ||
+      event.request.headers.get("accept") === "text/event-stream") {
+    return;
+  }
+
   // Live data: always go to the network, never serve a cached/stale bracket.
   if (url.origin + url.pathname === LIVE_DATA_URL) {
     event.respondWith(fetch(event.request).catch(() => caches.match(event.request)));
