@@ -445,7 +445,7 @@
 
   /* ============ CONFIG ============ */
   const DATA_URL = "https://world-cup-data.pointvirgule.dev/bracket.json";
-  const AUTO_REFRESH_MS = 60000; // re-read the remote JSON feed every minute
+  const AUTO_REFRESH_MS = 120000; // re-read the remote JSON feed every two minutes
 
   const ROUND_COLORS = ["--r1","--r2","--r3","--r4","--r5"];
 
@@ -466,6 +466,7 @@
       emptyErrTitle:"Impossible de récupérer les données",
       emptyErrText:"La requête vers <code>world-cup-data.pointvirgule.dev/bracket.json</code> a échoué (réseau, service indisponible ou cache). Réessaie dans quelques instants ou recharge la page en navigation privée pour écarter un souci de cache.",
       retry:"Réessayer", finale:"FINALE", today:"Aujourd'hui !", kickoff:"⏱ Coup d'envoi…", live:"🔴 En direct", tbd:"À déterminer",
+      halfTime:"Mi-temps", stoppageTime:"Arrêts de jeu", extraTime:"Prolongations", penalties:"Tirs au but",
       topScorers:"Meilleurs buteurs", topAssists:"Meilleures passes décisives", bestTeams:"Meilleures équipes",
       recentMatches:"Derniers matchs", goals:"Buts", assistsShort:"Passes", played:"J", wins:"V", draws:"N", losses:"D", diff:"Diff",
       close:"Fermer", noStats:"Statistiques pas encore disponibles.", statsUpdated:"Mis à jour",
@@ -487,6 +488,7 @@
       emptyErrTitle:"Couldn't fetch the data",
       emptyErrText:"The request to <code>world-cup-data.pointvirgule.dev/bracket.json</code> failed (network, service outage, or cache). Please try again shortly or reload the page in a private window to rule out caching.",
       retry:"Retry", finale:"FINAL", today:"Today!", kickoff:"⏱ Kicking off…", live:"🔴 Live", tbd:"TBD",
+      halfTime:"Half-time", stoppageTime:"Stoppage time", extraTime:"Extra time", penalties:"Penalties",
       topScorers:"Top scorers", topAssists:"Top assists", bestTeams:"Best teams",
       recentMatches:"Recent matches", goals:"Goals", assistsShort:"Assists", played:"P", wins:"W", draws:"D", losses:"L", diff:"Diff",
       close:"Close", noStats:"Stats not available yet.", statsUpdated:"Updated",
@@ -508,6 +510,7 @@
       emptyErrTitle:"No se pudieron obtener los datos",
       emptyErrText:"La solicitud a <code>world-cup-data.pointvirgule.dev/bracket.json</code> falló (red, servicio no disponible o caché). Vuelve a intentarlo en unos instantes o recarga la página en una ventana privada para descartar un problema de caché.",
       retry:"Reintentar", finale:"FINAL", today:"¡Hoy!", kickoff:"⏱ Empieza pronto…", live:"🔴 En vivo", tbd:"Por determinar",
+      halfTime:"Descanso", stoppageTime:"Descuento", extraTime:"Prórroga", penalties:"Penaltis",
       topScorers:"Máximos goleadores", topAssists:"Máximas asistencias", bestTeams:"Mejores equipos",
       recentMatches:"Últimos partidos", goals:"Goles", assistsShort:"Asist.", played:"J", wins:"G", draws:"E", losses:"P", diff:"Dif",
       close:"Cerrar", noStats:"Estadísticas aún no disponibles.", statsUpdated:"Actualizado",
@@ -1015,7 +1018,7 @@
   }
   function fmtStatus(m){
     if(m.status === "final") return t("statusFinal");
-    if(m.status === "live") return t("statusLive");
+    if(m.status === "live") return formatLiveMatchStatus(m);
     const localDate = formatLocalMatchDate(m.date);
     if(localDate) return localDate;
     return t("tbd");
@@ -1087,6 +1090,70 @@
     return !!(m && (m.status === "live" || (m.status === "scheduled" && hasMatchScore(m))));
   }
 
+  function numberOrNull(value){
+    const n = Number(value);
+    return Number.isFinite(n) ? n : null;
+  }
+
+  function getLiveDuration(m){
+    return (m && m.live && m.live.duration ? String(m.live.duration) : "").toUpperCase();
+  }
+
+  function getLiveApiStatus(m){
+    return (m && m.live && m.live.apiStatus ? String(m.live.apiStatus) : "").toUpperCase();
+  }
+
+  function estimatedLiveMinute(m){
+    const explicitMinute = numberOrNull(m && m.live && m.live.minute);
+    if(explicitMinute != null) return explicitMinute;
+    const kickoff = matchTimeMs(m && m.date);
+    if(kickoff == null) return null;
+    const elapsed = Math.floor((Date.now() - kickoff) / 60000) + 1;
+    if(elapsed < 1) return null;
+    return Math.min(elapsed, getLiveDuration(m) === "EXTRA_TIME" ? 120 : 90);
+  }
+
+  function stoppageBase(minute){
+    if(minute <= 45) return 45;
+    if(minute <= 90) return 90;
+    if(minute <= 105) return 105;
+    return 120;
+  }
+
+  function formatLiveMinute(minute, injuryTime){
+    if(minute == null) return "";
+    if(injuryTime && injuryTime > 0){
+      return `${stoppageBase(minute)}+${injuryTime}′`;
+    }
+    return `${minute}′`;
+  }
+
+  function formatLiveMatchStatus(m){
+    if(!m || m.status !== "live") return t("live");
+    if(getLiveApiStatus(m) === "PAUSED") return t("halfTime");
+
+    const duration = getLiveDuration(m);
+    if(duration === "PENALTY_SHOOTOUT") return t("penalties");
+
+    const minute = estimatedLiveMinute(m);
+    const injuryTime = numberOrNull(m.live && m.live.injuryTime);
+    const minuteText = formatLiveMinute(minute, injuryTime);
+    const phases = [];
+    if(duration === "EXTRA_TIME" || (minute != null && minute > 90)) phases.push(t("extraTime"));
+    if(injuryTime && injuryTime > 0) phases.push(t("stoppageTime"));
+    if(phases.length) return minuteText ? `${minuteText} · ${phases.join(" · ")}` : phases.join(" · ");
+    return minuteText || t("live");
+  }
+
+  function formatLiveScore(m){
+    const hs = m.score && m.score.home!=null ? m.score.home : 0;
+    const as = m.score && m.score.away!=null ? m.score.away : 0;
+    if(m.penalties && m.penalties.home!=null && m.penalties.away!=null){
+      return `${hs} – ${as} · ${m.penalties.home}–${m.penalties.away}`;
+    }
+    return `${hs} – ${as}`;
+  }
+
   function refreshNextMatch(){
     const all = [];
     rounds.forEach((round,k)=> round.forEach((m,i)=> all.push({m,k,i})));
@@ -1108,7 +1175,7 @@
     const homeName = nextMatchRef.home && nextMatchRef.home.name ? nextMatchRef.home.name : "?";
     const awayName = nextMatchRef.away && nextMatchRef.away.name ? nextMatchRef.away.name : "?";
     label.textContent = `${homeName} – ${awayName}`;
-    const localDate = isActiveMatch(nextMatchRef) ? t("live") : formatLocalMatchDate(nextMatchRef.date);
+    const localDate = isActiveMatch(nextMatchRef) ? formatLiveMatchStatus(nextMatchRef) : formatLocalMatchDate(nextMatchRef.date);
     chip.title = localDate ? `${homeName} – ${awayName} · ${localDate}` : `${homeName} – ${awayName}`;
 
     const url1 = nextMatchRef.home && flagUrl(nextMatchRef.home.code);
@@ -1137,10 +1204,8 @@
     const scoreEl = document.getElementById("nextMatchScore");
     if(!nextMatchRef){ return; }
     if(isActiveMatch(nextMatchRef)){
-      el2.textContent = t("live");
-      const hs = nextMatchRef.score && nextMatchRef.score.home!=null ? nextMatchRef.score.home : 0;
-      const as = nextMatchRef.score && nextMatchRef.score.away!=null ? nextMatchRef.score.away : 0;
-      scoreEl.textContent = `${hs} – ${as}`;
+      el2.textContent = formatLiveMatchStatus(nextMatchRef);
+      scoreEl.textContent = formatLiveScore(nextMatchRef);
       return;
     }
     scoreEl.textContent = "";

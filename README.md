@@ -1,12 +1,12 @@
 # Mondial 2026 — Arbre circulaire (live)
 
 Arbre à élimination directe de la Coupe du Monde 2026, disposé en cercle,
-mis à jour automatiquement toutes les 5 minutes via GitHub Actions.
+avec un affichage qui relit le flux live toutes les 2 minutes.
 
 ## Comment ça marche
 
 ```
-football-data.org  --(toutes les 5 min, côté serveur)-->  scripts/fetch-data.js
+football-data.org  --(côté serveur)-->  scripts/fetch-data.js
                                                                    |
                                                                    v
                                                           data/bracket.json  (commité dans le repo)
@@ -35,7 +35,7 @@ son propre domaine, donc aucun souci de CORS ni de quota côté client.
    Onglet Actions → "Update World Cup bracket data" → Run workflow
 
 5. Va sur `https://TON-PSEUDO.github.io/world-cup/` — l'arbre se remplit et se
-   met à jour tout seul toutes les 5 minutes, à chaque fois que tu reviens.
+   relit tout seul le flux live toutes les 2 minutes, à chaque fois que tu reviens.
 
 ## Notes
 

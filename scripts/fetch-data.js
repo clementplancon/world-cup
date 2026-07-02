@@ -132,6 +132,11 @@ function mapStatus(apiStatus) {
   return "scheduled";
 }
 
+function numberOrNull(value) {
+  const n = Number(value);
+  return Number.isFinite(n) ? n : null;
+}
+
 function teamCode(t) {
   if (!t) return null;
   return t.tla || (t.shortName || t.name || "").slice(0, 3).toUpperCase();
@@ -171,11 +176,22 @@ function placeholderMatch(matchNum) {
       score: { home: null, away: null },
       penalties: null,
       status: "scheduled",
+      live: null,
       winner: null,
       date: MATCH_DATES[matchNum] || null,
     };
   }
-  return { home: null, away: null, score: { home: null, away: null }, penalties: null, status: "scheduled", winner: null, date: MATCH_DATES[matchNum] || null };
+  return { home: null, away: null, score: { home: null, away: null }, penalties: null, status: "scheduled", live: null, winner: null, date: MATCH_DATES[matchNum] || null };
+}
+
+function liveDetails(mt, status) {
+  if (status !== "live") return null;
+  return {
+    apiStatus: mt.status || null,
+    duration: mt.score && mt.score.duration ? mt.score.duration : null,
+    minute: numberOrNull(mt.minute),
+    injuryTime: numberOrNull(mt.injuryTime),
+  };
 }
 
 function toMatchObject(mt, matchNum) {
@@ -193,6 +209,7 @@ function toMatchObject(mt, matchNum) {
     score: { home: mt.score.fullTime.home, away: mt.score.fullTime.away },
     penalties: mt.score.penalties && mt.score.penalties.home != null ? mt.score.penalties : null,
     status,
+    live: liveDetails(mt, status),
     winner,
     date: mt.utcDate || MATCH_DATES[matchNum] || null,
   };
