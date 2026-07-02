@@ -160,6 +160,28 @@ function toMatchObject(mt, matchNum) {
   };
 }
 
+// Given a completed child match's result, returns the team object that won
+// it, or null if that child hasn't been decided yet.
+function winnerOf(matchResult) {
+  if (!matchResult || !matchResult.winner) return null;
+  return matchResult[matchResult.winner] || null;
+}
+
+// Fills in a match's home/away teams from the known winners of its child
+// matches when the API hasn't published that fixture's teams yet (or hasn't
+// created the fixture at all). This is what lets a round of 16+ slot show
+// its teams as soon as both feeder matches are final, instead of waiting for
+// football-data.org to catch up.
+function fillFromChildren(match, matchNum, matchResults) {
+  const children = MATCH_CHILDREN[matchNum];
+  if (!children) return match;
+  const [childA, childB] = children;
+  const home = match.home || winnerOf(matchResults[childA]);
+  const away = match.away || winnerOf(matchResults[childB]);
+  if (home === match.home && away === match.away) return match;
+  return { ...match, home, away };
+}
+
 function buildRounds(allMatches) {
   const byStage = {};
   allMatches.forEach((mt) => {
@@ -168,14 +190,19 @@ function buildRounds(allMatches) {
     byStage[s].push(mt);
   });
 
+  const matchResults = {};
   const stageOrder = ["LAST_32", "LAST_16", "QUARTER_FINALS", "SEMI_FINALS", "FINAL"];
-  return stageOrder.map((stageKey) => {
+  const rounds = stageOrder.map((stageKey) => {
     const apiList = byStage[stageKey] || [];
     return ROUND_MATCH_NUMBERS[stageKey].map((num) => {
       const mt = findApiMatch(apiList, num);
-      return mt ? toMatchObject(mt, num) : placeholderMatch(num);
+      let match = mt ? toMatchObject(mt, num) : placeholderMatch(num);
+      match = fillFromChildren(match, num, matchResults);
+      matchResults[num] = match;
+      return match;
     });
   });
+  return rounds;
 }
 
 // Reads the bracket.json already on disk (if any) and decides whether "now"
