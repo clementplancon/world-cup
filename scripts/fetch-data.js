@@ -6,13 +6,6 @@ const API_BASE = "https://api.football-data.org/v4";
 const COMPETITION = "WC";
 const OUTPUT_PATH = path.join(__dirname, "..", "data", "bracket.json");
 
-// How long before kickoff we start polling, and how long after kickoff we
-// keep polling a match that isn't marked final yet — generous enough to
-// cover extra time + penalties in a knockout match (90' + stoppage + 30' ET
-// + ~15' penalties, plus margin).
-const PRE_KICKOFF_BUFFER_MIN = 10;
-const POST_KICKOFF_BUFFER_MIN = 170;
-
 // ---------------------------------------------------------------------------
 // FIXED FIFA bracket topology (2026 World Cup, 32-team knockout stage).
 // This is published by FIFA in advance and does NOT depend on results — only
@@ -205,52 +198,11 @@ function buildRounds(allMatches) {
   return rounds;
 }
 
-// Reads the bracket.json already on disk (if any) and decides whether "now"
-// falls inside any match's active window (about-to-start, in-progress, or
-// just-finished-but-unconfirmed). Returns true when we should call the API.
-function isInsideAMatchWindow(now) {
-  let existing;
-  try {
-    existing = JSON.parse(fs.readFileSync(OUTPUT_PATH, "utf8"));
-  } catch {
-    return { should: true, reason: "Pas de données existantes — premier import." };
-  }
-
-  const allMatches = (existing.rounds || []).flat();
-  if (!allMatches.length) {
-    return { should: true, reason: "bracket.json vide — premier import." };
-  }
-
-  for (const m of allMatches) {
-    if (m.status === "live") {
-      return { should: true, reason: `Match en cours (${m.home?.code || "?"} vs ${m.away?.code || "?"}).` };
-    }
-    if (m.status === "final" || !m.date) continue;
-    const kickoff = new Date(m.date).getTime();
-    const windowStart = kickoff - PRE_KICKOFF_BUFFER_MIN * 60000;
-    const windowEnd = kickoff + POST_KICKOFF_BUFFER_MIN * 60000;
-    if (now >= windowStart && now <= windowEnd) {
-      return { should: true, reason: `Fenêtre de match active (${m.home?.code || "?"} vs ${m.away?.code || "?"}, coup d'envoi ${m.date}).` };
-    }
-  }
-
-  return { should: false, reason: "Aucun match en fenêtre active — appel API sauté." };
-}
-
 async function main() {
   const key = process.env.FOOTBALL_DATA_API_KEY;
   if (!key) {
     console.error("Missing FOOTBALL_DATA_API_KEY env var (set it as a repo secret).");
     process.exit(1);
-  }
-
-  const isManualRun = process.env.GITHUB_EVENT_NAME === "workflow_dispatch";
-  const check = isManualRun
-    ? { should: true, reason: "Déclenchement manuel (Run workflow) — appel forcé, fenêtre de match ignorée." }
-    : isInsideAMatchWindow(Date.now());
-  console.log(check.reason);
-  if (!check.should) {
-    return; // nothing to do — save the API call, leave bracket.json untouched
   }
 
   const res = await fetch(`${API_BASE}/competitions/${COMPETITION}/matches`, {
