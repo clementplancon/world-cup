@@ -21,11 +21,13 @@ const cors = require("cors");
 const { fetchAndBuildBracket } = require("./lib/bracket");
 const { detectChanges } = require("./lib/diff");
 const push = require("./lib/push");
+const { regenerateOgImage, OG_IMAGE_PATH } = require("./lib/ogImage");
 
 const PORT = process.env.PORT || 3000;
 const PUBLIC_ORIGIN = process.env.PUBLIC_ORIGIN || "*";
 const FETCH_INTERVAL_MS = 2 * 60 * 1000; // 2 min — respects the 10 req/min rate limit
 const SSE_PING_INTERVAL_MS = 25 * 1000; // keep-alive so idle proxies don't drop the stream
+const OG_IMAGE_INTERVAL_MS = 15 * 60 * 1000; // regenerate the share image every 15 min
 const DATA_DIR = path.join(__dirname, "data");
 const BRACKET_PATH = path.join(DATA_DIR, "bracket.json");
 
@@ -213,6 +215,21 @@ app.post("/api/unsubscribe", (req, res) => {
   res.json({ ok: true });
 });
 
+// ---------------------------------------------------------------------------
+// OG share image (Phase 3)
+// Served with a 10 min cache — unlike bracket.json (no-cache), we WANT social
+// crawlers to cache it rather than re-scrape on every share. If the image hasn't
+// been generated yet, 404 so a crawler falls back to the static meta image.
+// ---------------------------------------------------------------------------
+app.get("/og-image.png", (req, res) => {
+  res.set("Access-Control-Allow-Origin", "*");
+  res.set("Cache-Control", "public, max-age=600");
+  if (!fs.existsSync(OG_IMAGE_PATH)) {
+    return res.status(404).end();
+  }
+  res.type("png").sendFile(OG_IMAGE_PATH);
+});
+
 // Real-time stream of bracket changes. Clients open this once and keep it open;
 // server.js pushes a typed event (kickoff/goal/fulltime) plus a generic
 // `update` whenever a new bracket is built. A periodic comment ping keeps the
@@ -260,4 +277,8 @@ app.listen(PORT, () => {
   // then keep polling on the fixed cadence.
   refreshBracket();
   setInterval(refreshBracket, FETCH_INTERVAL_MS);
+  // Generate the OG share image once at boot, then refresh it every 15 min.
+  // Failures are swallowed inside regenerateOgImage so they never affect serving.
+  regenerateOgImage();
+  setInterval(regenerateOgImage, OG_IMAGE_INTERVAL_MS);
 });
