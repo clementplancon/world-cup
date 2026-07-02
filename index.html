@@ -956,9 +956,10 @@
         let sub = "";
         if(champ.status === "live"){
           sub = t("live");
-        } else if(champ.date){
-          const daysLeft = Math.ceil((new Date(champ.date).getTime() - Date.now()) / 86400000);
-          sub = daysLeft > 0 ? `${t("dIn")} ${daysLeft}${t("jShort")}` : t("today");
+        } else {
+          const finalTime = matchTimeMs(champ.date);
+          const daysLeft = finalTime == null ? null : Math.ceil((finalTime - Date.now()) / 86400000);
+          sub = daysLeft == null ? "" : (daysLeft > 0 ? `${t("dIn")} ${daysLeft}${t("jShort")}` : t("today"));
         }
         if(sub){
           const subEl = el("text", {x:cx, y:cy+14, "text-anchor":"middle", "font-size":"9", fill:"var(--text-dim)"}, badge);
@@ -982,11 +983,41 @@
   }
 
   /* ============ Tooltip ============ */
+  function currentLocale(){
+    return lang === "en" ? "en-US" : lang === "es" ? "es-ES" : "fr-FR";
+  }
+  function parseMatchDate(value){
+    if(!value) return null;
+    const normalized = typeof value === "string" && /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}(?::\d{2}(?:\.\d+)?)?$/.test(value)
+      ? value + "Z"
+      : value;
+    const date = new Date(normalized);
+    return Number.isNaN(date.getTime()) ? null : date;
+  }
+  function matchTimeMs(value){
+    const date = parseMatchDate(value);
+    return date ? date.getTime() : null;
+  }
+  function formatLocalMatchDate(value){
+    const date = parseMatchDate(value);
+    if(!date) return null;
+    try{
+      return date.toLocaleString(currentLocale(), {
+        day:"2-digit",
+        month:"short",
+        hour:"2-digit",
+        minute:"2-digit",
+        timeZoneName:"short",
+      });
+    }catch(e){
+      return date.toLocaleString(currentLocale());
+    }
+  }
   function fmtStatus(m){
     if(m.status === "final") return t("statusFinal");
     if(m.status === "live") return t("statusLive");
-    const locale = lang === "en" ? "en-US" : lang === "es" ? "es-ES" : "fr-FR";
-    if(m.date) return new Date(m.date).toLocaleString(locale, {day:"2-digit", month:"short", hour:"2-digit", minute:"2-digit"});
+    const localDate = formatLocalMatchDate(m.date);
+    if(localDate) return localDate;
     return t("tbd");
   }
   function showTooltip(e, m){
@@ -1053,8 +1084,9 @@
     rounds.forEach((round,k)=> round.forEach((m,i)=> all.push({m,k,i})));
     const live = all.find(x => x.m.status === "live");
     const upcoming = all
-      .filter(x => x.m.status === "scheduled" && x.m.date)
-      .sort((a,b)=> new Date(a.m.date) - new Date(b.m.date))[0];
+      .map(x => ({...x, time: matchTimeMs(x.m.date)}))
+      .filter(x => x.m.status === "scheduled" && x.time != null)
+      .sort((a,b)=> a.time - b.time)[0];
     const chosen = live || upcoming || null;
     nextMatchRef = chosen ? chosen.m : null;
     nextMatchLoc = chosen ? { round: chosen.k, idx: chosen.i } : null;
@@ -1068,6 +1100,8 @@
     const homeName = nextMatchRef.home && nextMatchRef.home.name ? nextMatchRef.home.name : "?";
     const awayName = nextMatchRef.away && nextMatchRef.away.name ? nextMatchRef.away.name : "?";
     label.textContent = `${homeName} – ${awayName}`;
+    const localDate = nextMatchRef.status === "live" ? t("live") : formatLocalMatchDate(nextMatchRef.date);
+    chip.title = localDate ? `${homeName} – ${awayName} · ${localDate}` : `${homeName} – ${awayName}`;
 
     const url1 = nextMatchRef.home && flagUrl(nextMatchRef.home.code);
     if(url1){ img1.src = url1; img1.style.display = "block"; } else { img1.style.display = "none"; }
@@ -1102,8 +1136,9 @@
       return;
     }
     scoreEl.textContent = "";
-    if(!nextMatchRef.date){ el2.textContent = ""; return; }
-    const diff = new Date(nextMatchRef.date).getTime() - Date.now();
+    const nextMatchTime = matchTimeMs(nextMatchRef.date);
+    if(nextMatchTime == null){ el2.textContent = ""; return; }
+    const diff = nextMatchTime - Date.now();
     if(diff <= 0){ el2.textContent = t("kickoff"); return; }
     const totalSec = Math.floor(diff/1000);
     const d = Math.floor(totalSec/86400);
