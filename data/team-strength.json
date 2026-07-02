@@ -1,0 +1,45 @@
+{
+  "model": {
+    "description": "Static seed ratings for the in-house knockout qualification probability model. Replace these estimates when an automated Elo/FIFA/form feed is added.",
+    "weights": {
+      "elo": 0.6,
+      "fifaRank": 0.25,
+      "recentForm": 0.15
+    }
+  },
+  "teams": {
+    "ARG": { "elo": 2145, "fifaRank": 1, "recentForm": 0.86 },
+    "FRA": { "elo": 2105, "fifaRank": 2, "recentForm": 0.82 },
+    "ESP": { "elo": 2070, "fifaRank": 3, "recentForm": 0.8 },
+    "ENG": { "elo": 2045, "fifaRank": 4, "recentForm": 0.76 },
+    "BRA": { "elo": 2035, "fifaRank": 5, "recentForm": 0.72 },
+    "POR": { "elo": 2010, "fifaRank": 6, "recentForm": 0.74 },
+    "NED": { "elo": 1985, "fifaRank": 7, "recentForm": 0.7 },
+    "BEL": { "elo": 1960, "fifaRank": 8, "recentForm": 0.68 },
+    "GER": { "elo": 1950, "fifaRank": 9, "recentForm": 0.66 },
+    "COL": { "elo": 1930, "fifaRank": 10, "recentForm": 0.72 },
+    "CRO": { "elo": 1905, "fifaRank": 11, "recentForm": 0.62 },
+    "URU": { "elo": 1895, "fifaRank": 12, "recentForm": 0.68 },
+    "USA": { "elo": 1845, "fifaRank": 13, "recentForm": 0.64 },
+    "MEX": { "elo": 1835, "fifaRank": 14, "recentForm": 0.62 },
+    "SUI": { "elo": 1825, "fifaRank": 15, "recentForm": 0.6 },
+    "MAR": { "elo": 1815, "fifaRank": 16, "recentForm": 0.66 },
+    "JPN": { "elo": 1810, "fifaRank": 17, "recentForm": 0.68 },
+    "SEN": { "elo": 1785, "fifaRank": 18, "recentForm": 0.62 },
+    "AUT": { "elo": 1775, "fifaRank": 19, "recentForm": 0.64 },
+    "ECU": { "elo": 1765, "fifaRank": 20, "recentForm": 0.58 },
+    "CAN": { "elo": 1745, "fifaRank": 21, "recentForm": 0.6 },
+    "NOR": { "elo": 1735, "fifaRank": 22, "recentForm": 0.58 },
+    "SWE": { "elo": 1725, "fifaRank": 23, "recentForm": 0.56 },
+    "AUS": { "elo": 1710, "fifaRank": 24, "recentForm": 0.56 },
+    "EGY": { "elo": 1705, "fifaRank": 25, "recentForm": 0.6 },
+    "DZA": { "elo": 1695, "fifaRank": 26, "recentForm": 0.58 },
+    "GHA": { "elo": 1680, "fifaRank": 27, "recentForm": 0.54 },
+    "CIV": { "elo": 1675, "fifaRank": 28, "recentForm": 0.58 },
+    "PAR": { "elo": 1665, "fifaRank": 29, "recentForm": 0.54 },
+    "RSA": { "elo": 1630, "fifaRank": 30, "recentForm": 0.52 },
+    "BIH": { "elo": 1620, "fifaRank": 31, "recentForm": 0.5 },
+    "COD": { "elo": 1610, "fifaRank": 32, "recentForm": 0.52 },
+    "CPV": { "elo": 1585, "fifaRank": 33, "recentForm": 0.54 }
+  }
+}

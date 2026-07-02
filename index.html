@@ -131,6 +131,12 @@
     font-variant-numeric:tabular-nums;
     font-weight:700;
   }
+  .match-node .probability{
+    fill:var(--gold);
+    font-size:10px;
+    font-variant-numeric:tabular-nums;
+    font-weight:700;
+  }
   .match-node .pen{
     fill:var(--text-faint);
     font-size:9px;
@@ -440,7 +446,7 @@
       headerTitle:"Mondial 2026", headerSubtitle:"· Phases finales",
       subtitle: "Arbre circulaire — des 32<sup>es</sup> de finale à la Finale",
       round32:"32es de finale", round16:"8es de finale", roundQF:"Quarts de finale", roundSF:"Demi-finales", roundF:"Finale",
-      statusFinal:"Terminé", statusLive:"En direct", eliminated:"Éliminé",
+      statusFinal:"Terminé", statusLive:"En direct", eliminated:"Éliminé", estimate:"estimation",
       following:"Suivi : ",
       zoomHint:"Pince ou molette pour zoomer",
       installBtn:"Installer l'application", exportBtn:"Télécharger l'image",
@@ -460,7 +466,7 @@
       headerTitle:"2026 World Cup", headerSubtitle:"· Knockout stage",
       subtitle: "Circular bracket — from the Round of 32 to the Final",
       round32:"Round of 32", round16:"Round of 16", roundQF:"Quarter-finals", roundSF:"Semi-finals", roundF:"Final",
-      statusFinal:"Finished", statusLive:"Live", eliminated:"Eliminated",
+      statusFinal:"Finished", statusLive:"Live", eliminated:"Eliminated", estimate:"estimate",
       following:"Following: ",
       zoomHint:"Pinch or scroll to zoom",
       installBtn:"Install app", exportBtn:"Download image",
@@ -480,7 +486,7 @@
       headerTitle:"Mundial 2026", headerSubtitle:"· Fase final",
       subtitle: "Cuadro circular — de los dieciseisavos a la Final",
       round32:"Dieciseisavos", round16:"Octavos de final", roundQF:"Cuartos de final", roundSF:"Semifinales", roundF:"Final",
-      statusFinal:"Finalizado", statusLive:"En vivo", eliminated:"Eliminado",
+      statusFinal:"Finalizado", statusLive:"En vivo", eliminated:"Eliminado", estimate:"estimación",
       following:"Siguiendo: ",
       zoomHint:"Pellizca o usa la rueda para hacer zoom",
       installBtn:"Instalar la aplicación", exportBtn:"Descargar imagen",
@@ -886,6 +892,8 @@
         const awayScore = m.score && m.score.away!=null ? m.score.away : "";
         const homePen = m.penalties && m.penalties.home!=null ? `(${m.penalties.home})` : "";
         const awayPen = m.penalties && m.penalties.away!=null ? `(${m.penalties.away})` : "";
+        const homeProbability = m.probabilities && m.probabilities.home != null ? `${m.probabilities.home}%` : "";
+        const awayProbability = m.probabilities && m.probabilities.away != null ? `${m.probabilities.away}%` : "";
 
         drawFlag(g, 12, 10, 8, homeCode);
         drawFlag(g, 12, 24, 8, awayCode);
@@ -893,8 +901,13 @@
         const t1 = el("text", {class:"home", x:26, y:13}, g); t1.textContent = homeCode || "—";
         const t2 = el("text", {class:"away", x:26, y:27}, g); t2.textContent = awayCode || "—";
 
+        const probabilityX = homeScore !== "" || awayScore !== "" ? boxW-34 : boxW-10;
         const s1 = el("text", {class:"score", x:boxW-10, y:13, "text-anchor":"end"}, g); s1.textContent = homeScore;
         const s2 = el("text", {class:"score", x:boxW-10, y:27, "text-anchor":"end"}, g); s2.textContent = awayScore;
+        if(homeProbability || awayProbability){
+          const pr1 = el("text", {class:"probability", x:probabilityX, y:13, "text-anchor":"end"}, g); pr1.textContent = homeProbability;
+          const pr2 = el("text", {class:"probability", x:probabilityX, y:27, "text-anchor":"end"}, g); pr2.textContent = awayProbability;
+        }
 
         if(homePen || awayPen){
           const pn1 = el("text", {class:"pen", x:boxW-10-16, y:13, "text-anchor":"end"}, g); pn1.textContent = homePen;
@@ -962,7 +975,11 @@
       const ap = m.penalties && m.penalties.away!=null ? ` (${m.penalties.away})` : "";
       scoreLine = `<div class="tt-meta">${m.score.home}${hp} – ${m.score.away}${ap}</div>`;
     }
-    tooltip.innerHTML = `<div class="tt-teams">${homeName} vs ${awayName}</div>${scoreLine}<div class="tt-meta">${fmtStatus(m)}</div>`;
+    let probabilityLine = "";
+    if(m.probabilities && m.probabilities.home != null && m.probabilities.away != null){
+      probabilityLine = `<div class="tt-meta">${m.probabilities.home}% – ${m.probabilities.away}% (${t("estimate")})</div>`;
+    }
+    tooltip.innerHTML = `<div class="tt-teams">${homeName} vs ${awayName}</div>${scoreLine}${probabilityLine}<div class="tt-meta">${fmtStatus(m)}</div>`;
     tooltip.classList.add("show");
     moveTooltip(e);
   }
