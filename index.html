@@ -1239,7 +1239,7 @@
 
   function estimatedLiveMinute(m){
     const explicitMinute = numberOrNull(m && m.live && m.live.minute);
-    if(explicitMinute != null) return explicitMinute;
+    if(explicitMinute != null && explicitMinute > 0) return explicitMinute;
     const kickoff = matchTimeMs(m && m.date);
     if(kickoff == null) return null;
     const elapsed = Math.floor((Date.now() - kickoff) / 60000) + 1;
