@@ -96,7 +96,11 @@
         "penalties": null,
         "status": "scheduled",
         "winner": null,
-        "date": "2026-07-02T23:00:00Z"
+        "date": "2026-07-02T23:00:00Z",
+        "probabilities": {
+          "home": 62,
+          "away": 38
+        }
       },
       {
         "home": {
@@ -114,7 +118,11 @@
         "penalties": null,
         "status": "scheduled",
         "winner": null,
-        "date": "2026-07-02T19:00:00Z"
+        "date": "2026-07-02T19:00:00Z",
+        "probabilities": {
+          "home": 80,
+          "away": 20
+        }
       },
       {
         "home": {
@@ -132,7 +140,11 @@
         "penalties": null,
         "status": "scheduled",
         "winner": null,
-        "date": "2026-07-02T00:00:00Z"
+        "date": "2026-07-02T00:00:00Z",
+        "probabilities": {
+          "home": 76,
+          "away": 24
+        }
       },
       {
         "home": {
@@ -150,7 +162,11 @@
         "penalties": null,
         "status": "scheduled",
         "winner": null,
-        "date": "2026-07-01T20:00:00Z"
+        "date": "2026-07-01T20:00:00Z",
+        "probabilities": {
+          "home": 69,
+          "away": 31
+        }
       },
       {
         "home": {
@@ -240,7 +256,11 @@
         "penalties": null,
         "status": "scheduled",
         "winner": null,
-        "date": "2026-07-03T22:00:00Z"
+        "date": "2026-07-03T22:00:00Z",
+        "probabilities": {
+          "home": 93,
+          "away": 7
+        }
       },
       {
         "home": {
@@ -258,7 +278,11 @@
         "penalties": null,
         "status": "scheduled",
         "winner": null,
-        "date": "2026-07-03T18:00:00Z"
+        "date": "2026-07-03T18:00:00Z",
+        "probabilities": {
+          "home": 50,
+          "away": 50
+        }
       },
       {
         "home": {
@@ -276,7 +300,11 @@
         "penalties": null,
         "status": "scheduled",
         "winner": null,
-        "date": "2026-07-03T03:00:00Z"
+        "date": "2026-07-03T03:00:00Z",
+        "probabilities": {
+          "home": 66,
+          "away": 34
+        }
       },
       {
         "home": {
@@ -294,7 +322,11 @@
         "penalties": null,
         "status": "scheduled",
         "winner": null,
-        "date": "2026-07-04T01:30:00Z"
+        "date": "2026-07-04T01:30:00Z",
+        "probabilities": {
+          "home": 77,
+          "away": 23
+        }
       }
     ],
     [
@@ -314,7 +346,11 @@
         "penalties": null,
         "status": "scheduled",
         "winner": null,
-        "date": "2026-07-04T21:00:00Z"
+        "date": "2026-07-04T21:00:00Z",
+        "probabilities": {
+          "home": 11,
+          "away": 89
+        }
       },
       {
         "home": {
@@ -332,7 +368,11 @@
         "penalties": null,
         "status": "scheduled",
         "winner": null,
-        "date": "2026-07-04T17:00:00Z"
+        "date": "2026-07-04T17:00:00Z",
+        "probabilities": {
+          "home": 41,
+          "away": 59
+        }
       },
       {
         "home": null,
@@ -374,7 +414,11 @@
         "penalties": null,
         "status": "scheduled",
         "winner": null,
-        "date": "2026-07-05T20:00:00Z"
+        "date": "2026-07-05T20:00:00Z",
+        "probabilities": {
+          "home": 80,
+          "away": 20
+        }
       },
       {
         "home": null,

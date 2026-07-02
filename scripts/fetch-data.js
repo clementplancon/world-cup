@@ -5,6 +5,7 @@ const path = require("path");
 const API_BASE = "https://api.football-data.org/v4";
 const COMPETITION = "WC";
 const OUTPUT_PATH = path.join(__dirname, "..", "data", "bracket.json");
+const TEAM_STRENGTH_PATH = path.join(__dirname, "..", "data", "team-strength.json");
 
 // ---------------------------------------------------------------------------
 // FIXED FIFA bracket topology (2026 World Cup, 32-team knockout stage).
@@ -80,6 +81,50 @@ const CODE_TO_NAME = {
   COL: "Colombie", POR: "Portugal", COD: "RD Congo", UZB: "Ouzbékistan",
   ENG: "Angleterre", CRO: "Croatie", GHA: "Ghana", PAN: "Panama",
 };
+
+const TEAM_STRENGTH = JSON.parse(fs.readFileSync(TEAM_STRENGTH_PATH, "utf8"));
+const PROBABILITY_WEIGHTS = TEAM_STRENGTH.model.weights;
+
+function clamp(n, min, max) {
+  return Math.max(min, Math.min(max, n));
+}
+
+function strengthRating(team) {
+  if (!team || !team.code) return null;
+  const data = TEAM_STRENGTH.teams[team.code];
+  if (!data) return null;
+
+  const elo = data.elo || 1700;
+  const fifaRating = data.fifaRank ? 2200 - (data.fifaRank - 1) * 12 : elo;
+  const formRating = data.recentForm != null ? 1700 + (data.recentForm - 0.5) * 500 : elo;
+
+  return (
+    PROBABILITY_WEIGHTS.elo * elo +
+    PROBABILITY_WEIGHTS.fifaRank * fifaRating +
+    PROBABILITY_WEIGHTS.recentForm * formRating
+  );
+}
+
+function qualificationProbabilities(match) {
+  if (!match.home || !match.away || match.status === "final") return null;
+
+  const homeRating = strengthRating(match.home);
+  const awayRating = strengthRating(match.away);
+  if (homeRating == null || awayRating == null) return null;
+
+  const rawHome = 1 / (1 + Math.pow(10, (awayRating - homeRating) / 400));
+  const home = clamp(Math.round(rawHome * 100), 5, 95);
+  return { home, away: 100 - home };
+}
+
+function withProbabilities(match) {
+  const probabilities = qualificationProbabilities(match);
+  if (!probabilities) {
+    const { probabilities: _probabilities, ...withoutProbabilities } = match;
+    return withoutProbabilities;
+  }
+  return { ...match, probabilities };
+}
 
 function mapStatus(apiStatus) {
   if (apiStatus === "FINISHED" || apiStatus === "AWARDED") return "final";
@@ -191,6 +236,7 @@ function buildRounds(allMatches) {
       const mt = findApiMatch(apiList, num);
       let match = mt ? toMatchObject(mt, num) : placeholderMatch(num);
       match = fillFromChildren(match, num, matchResults);
+      match = withProbabilities(match);
       matchResults[num] = match;
       return match;
     });
