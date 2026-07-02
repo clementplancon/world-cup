@@ -1079,13 +1079,21 @@
   let nextMatchRef = null;
   let nextMatchLoc = null; // { round, idx } — lets the chip locate the node in the circle
 
+  function hasMatchScore(m){
+    return !!(m && m.score && m.score.home != null && m.score.away != null);
+  }
+
+  function isActiveMatch(m){
+    return !!(m && (m.status === "live" || (m.status === "scheduled" && hasMatchScore(m))));
+  }
+
   function refreshNextMatch(){
     const all = [];
     rounds.forEach((round,k)=> round.forEach((m,i)=> all.push({m,k,i})));
-    const live = all.find(x => x.m.status === "live");
+    const live = all.find(x => isActiveMatch(x.m));
     const upcoming = all
       .map(x => ({...x, time: matchTimeMs(x.m.date)}))
-      .filter(x => x.m.status === "scheduled" && x.time != null)
+      .filter(x => x.m.status === "scheduled" && !hasMatchScore(x.m) && x.time != null)
       .sort((a,b)=> a.time - b.time)[0];
     const chosen = live || upcoming || null;
     nextMatchRef = chosen ? chosen.m : null;
@@ -1100,7 +1108,7 @@
     const homeName = nextMatchRef.home && nextMatchRef.home.name ? nextMatchRef.home.name : "?";
     const awayName = nextMatchRef.away && nextMatchRef.away.name ? nextMatchRef.away.name : "?";
     label.textContent = `${homeName} – ${awayName}`;
-    const localDate = nextMatchRef.status === "live" ? t("live") : formatLocalMatchDate(nextMatchRef.date);
+    const localDate = isActiveMatch(nextMatchRef) ? t("live") : formatLocalMatchDate(nextMatchRef.date);
     chip.title = localDate ? `${homeName} – ${awayName} · ${localDate}` : `${homeName} – ${awayName}`;
 
     const url1 = nextMatchRef.home && flagUrl(nextMatchRef.home.code);
@@ -1108,7 +1116,7 @@
     const url2 = nextMatchRef.away && flagUrl(nextMatchRef.away.code);
     if(url2){ img2.src = url2; img2.style.display = "block"; } else { img2.style.display = "none"; }
 
-    chip.classList.toggle("is-live", nextMatchRef.status === "live");
+    chip.classList.toggle("is-live", isActiveMatch(nextMatchRef));
     chip.style.display = "flex";
     tickCountdown();
   }
@@ -1128,7 +1136,7 @@
     const el2 = document.getElementById("nextMatchCountdown");
     const scoreEl = document.getElementById("nextMatchScore");
     if(!nextMatchRef){ return; }
-    if(nextMatchRef.status === "live"){
+    if(isActiveMatch(nextMatchRef)){
       el2.textContent = t("live");
       const hs = nextMatchRef.score && nextMatchRef.score.home!=null ? nextMatchRef.score.home : 0;
       const as = nextMatchRef.score && nextMatchRef.score.away!=null ? nextMatchRef.score.away : 0;
