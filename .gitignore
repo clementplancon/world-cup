@@ -1,0 +1,16 @@
+# Secrets — never commit
+.env
+
+# Node
+node_modules/
+
+# Generated data (server writes these at runtime)
+data/bracket.json
+data/stats.json
+data/subscriptions.json
+
+# Generated assets
+public/og-image.png
+
+# PM2 logs
+logs/

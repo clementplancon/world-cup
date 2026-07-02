@@ -37,6 +37,68 @@ son propre domaine, donc aucun souci de CORS ni de quota côté client.
 5. Va sur `https://TON-PSEUDO.github.io/world-cup/` — l'arbre se remplit et se
    relit tout seul le flux live toutes les 2 minutes, à chaque fois que tu reviens.
 
+## Serveur persistant (`server.js`) — Phase 0
+
+Le front-end en production ne lit plus `data/bracket.json` depuis GitHub Pages,
+mais depuis un **serveur Node persistant** hébergé sur
+`https://world-cup-data.pointvirgule.dev` (voir `DATA_URL` dans `index.html`).
+Ce serveur remplace le script one-shot : il interroge football-data.org toutes
+les 2 minutes, garde le dernier tableau en mémoire et l'expose en HTTP.
+
+```
+football-data.org --(toutes les 2 min)--> server.js (lib/bracket.js)
+                                                   |
+                                     ┌─────────────┴─────────────┐
+                                     v                           v
+                          GET /bracket.json  { updated, rounds }   data/bracket.json (persisté)
+                                     |
+                                     v
+                        index.html (fetch CORS sur le domaine du serveur)
+```
+
+- **`lib/bracket.js`** : toute la logique métier (topologie du tableau,
+  `buildRounds`, `isInsideAMatchWindow`, `fetchAndBuildBracket`). Partagée entre
+  le serveur et le CLI — une seule source de vérité.
+- **`scripts/fetch-data.js`** : conservé comme CLI manuel one-shot
+  (`FOOTBALL_DATA_API_KEY=... node scripts/fetch-data.js`).
+- **`GET /bracket.json`** : renvoie exactement le schéma `{ updated, rounds }`,
+  `Access-Control-Allow-Origin: *`, `Cache-Control: no-cache, must-revalidate`.
+  Renvoie `{ updated: null, rounds: [] }` en 200 tant qu'aucune donnée n'existe.
+- **`GET /health`** : `{ status: "ok", lastFetchAt }`.
+
+### Installation sur le serveur (`/opt/world-cup-data`)
+
+```bash
+npm install                     # express, dotenv, cors
+cp .env.example .env            # puis renseigner FOOTBALL_DATA_API_KEY, PORT, PUBLIC_ORIGIN
+pm2 start ecosystem.config.js   # instances: 1 — NE PAS clusteriser (état en mémoire)
+pm2 logs world-cup-data         # doit montrer des fetchs réguliers
+```
+
+> **Une seule instance.** L'état en mémoire (à venir : clients SSE) impose
+> `instances: 1` dans PM2. Ne jamais passer en cluster sans pub/sub partagé.
+
+### Caddy
+
+Remplacer le bloc `file_server` de `world-cup-data.pointvirgule.dev` par un
+reverse-proxy vers le serveur Node :
+
+```
+world-cup-data.pointvirgule.dev {
+    reverse_proxy localhost:3000
+    header {
+        X-Robots-Tag "noindex"
+    }
+}
+```
+
+### Optimisation rate-limit
+
+`fetchAndBuildBracket` n'appelle l'API que dans une fenêtre autour d'un match
+(`isInsideAMatchWindow`) dès qu'un tableau est déjà en mémoire, afin de rester
+sous la limite de 10 req/min de football-data.org. Au premier démarrage (aucune
+donnée), un fetch immédiat est effectué pour amorcer le tableau.
+
 ## Notes
 
 - GitHub peut retarder légèrement les cron `schedule` en cas de forte charge sur
