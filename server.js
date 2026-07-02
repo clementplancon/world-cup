@@ -21,7 +21,7 @@ const cors = require("cors");
 const { fetchAndBuildBracket } = require("./lib/bracket");
 const { detectChanges } = require("./lib/diff");
 const push = require("./lib/push");
-const { regenerateOgImage, OG_IMAGE_PATH } = require("./lib/ogImage");
+const { regenerateOgImage } = require("./lib/ogImage");
 
 const PORT = process.env.PORT || 3000;
 const PUBLIC_ORIGIN = process.env.PUBLIC_ORIGIN || "*";
@@ -217,18 +217,22 @@ app.post("/api/unsubscribe", (req, res) => {
 
 // ---------------------------------------------------------------------------
 // OG share image (Phase 3)
-// Served with a 10 min cache — unlike bracket.json (no-cache), we WANT social
-// crawlers to cache it rather than re-scrape on every share. If the image hasn't
-// been generated yet, 404 so a crawler falls back to the static meta image.
+// Served via express.static from ./public with a 10 min cache — unlike
+// bracket.json (no-cache), we WANT social crawlers to cache it rather than
+// re-scrape on every share. A missing file falls through to 404 so a crawler
+// falls back to the static meta image. Using the built-in static file server
+// (rather than a hand-rolled fs read in a route) keeps this a plain asset route.
 // ---------------------------------------------------------------------------
-app.get("/og-image.png", (req, res) => {
-  res.set("Access-Control-Allow-Origin", "*");
-  res.set("Cache-Control", "public, max-age=600");
-  if (!fs.existsSync(OG_IMAGE_PATH)) {
-    return res.status(404).end();
-  }
-  res.type("png").sendFile(OG_IMAGE_PATH);
-});
+const PUBLIC_DIR = path.join(__dirname, "public");
+app.use(
+  express.static(PUBLIC_DIR, {
+    maxAge: "10m",
+    setHeaders: (res) => {
+      res.set("Access-Control-Allow-Origin", "*");
+      res.set("Cache-Control", "public, max-age=600");
+    },
+  })
+);
 
 // Real-time stream of bracket changes. Clients open this once and keep it open;
 // server.js pushes a typed event (kickoff/goal/fulltime) plus a generic
