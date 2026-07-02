@@ -66,6 +66,33 @@ football-data.org --(toutes les 2 min)--> server.js (lib/bracket.js)
   Renvoie `{ updated: null, rounds: [] }` en 200 tant qu'aucune donnée n'existe.
 - **`GET /health`** : `{ status: "ok", lastFetchAt }`.
 
+## Temps réel (`GET /events`) — Phase 1
+
+Le serveur pousse les changements de tableau en **Server-Sent Events**. Le
+front-end ouvre une connexion persistante et reçoit les mises à jour en quelques
+secondes, sans attendre le prochain `fetch()`.
+
+- **`GET /events`** : flux `text/event-stream` (`Access-Control-Allow-Origin: *`).
+  À l'ouverture, un événement `update` avec le tableau courant est envoyé
+  immédiatement. Un ping commentaire (`: ping`) est émis toutes les 25 s pour
+  empêcher un proxy inactif de fermer la connexion.
+- À chaque nouveau tableau, `lib/diff.js` compare l'ancien et le nouveau
+  (`[roundIndex][matchIndex]`) et le serveur diffuse :
+  - des événements typés — `kickoff` (passage en `live`), `goal` (score modifié
+    en `live`), `fulltime` (passage en `final`) — chacun `{ type, round, idx, match }` ;
+  - puis toujours un événement générique `update` avec le tableau complet.
+- Au **premier démarrage** (aucun tableau précédent), aucun événement typé n'est
+  généré, pour éviter un flood au lancement.
+
+> **Une seule instance (rappel).** La liste des clients SSE vit en mémoire
+> (`sseClients` dans `server.js`). C'est pour ça que PM2 doit rester en
+> `instances: 1` : un second worker aurait sa propre liste et n'enverrait jamais
+> les événements diffusés par l'autre.
+
+Côté front (hors périmètre de ce repo serveur), s'abonner via
+`new EventSource(DATA_URL_ORIGIN + "/events")`, écouter l'événement `update`, et
+conserver le `fetch()` périodique existant comme filet de secours.
+
 ### Installation sur le serveur (`/opt/world-cup-data`)
 
 ```bash
@@ -75,7 +102,7 @@ pm2 start ecosystem.config.js   # instances: 1 — NE PAS clusteriser (état en 
 pm2 logs world-cup-data         # doit montrer des fetchs réguliers
 ```
 
-> **Une seule instance.** L'état en mémoire (à venir : clients SSE) impose
+> **Une seule instance.** L'état en mémoire (clients SSE, voir Phase 1) impose
 > `instances: 1` dans PM2. Ne jamais passer en cluster sans pub/sub partagé.
 
 ### Caddy
