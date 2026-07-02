@@ -1157,7 +1157,7 @@
         canvas.toBlob(async (blob)=>{
           try{
             if(!blob){ throw new Error("toBlob failed"); }
-            await saveOrSharePng(blob);
+            await downloadPng(blob);
             resolve();
           }catch(err){ reject(err); }
         }, "image/png");
@@ -1170,40 +1170,17 @@
     }
   }
 
-  // Mobile "in-app" browsers (Instagram, Facebook, TikTok, LinkedIn...) run
-  // pages inside a WebView that often silently ignores the `download`
-  // attribute on <a> — the click does nothing visible, which is exactly the
-  // bug reported. The Web Share API (available in most of these WebViews)
-  // hands the file off to the OS share sheet, letting the user save it to
-  // their photos from there. When that API isn't available we fall back to
-  // the classic download link, then additionally open the image in a new
-  // tab so the user can still save it manually (e.g. long-press > "Save
-  // image") if the download attribute was ignored.
-  async function saveOrSharePng(blob){
+  function downloadPng(blob){
     const fileName = "mondial-2026-arbre.png";
-    try{
-      const file = new File([blob], fileName, { type:"image/png" });
-      if(navigator.canShare && navigator.canShare({ files:[file] })){
-        await navigator.share({ files:[file], title:"Mondial 2026" });
-        return;
-      }
-    }catch(shareErr){
-      if(shareErr && shareErr.name === "AbortError") return; // user cancelled the share sheet
-      console.warn("Partage natif indisponible, tentative de téléchargement classique :", shareErr);
-    }
-
     const blobUrl = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = blobUrl;
     a.download = fileName;
+    a.style.display = "none";
     document.body.appendChild(a);
     a.click();
     a.remove();
-
-    // Fallback for in-app browsers that ignore the download attribute:
-    // open the image in a new tab so it can still be saved manually.
-    setTimeout(()=>{ window.open(blobUrl, "_blank"); }, 150);
-    setTimeout(()=>{ URL.revokeObjectURL(blobUrl); }, 60000);
+    setTimeout(()=>{ URL.revokeObjectURL(blobUrl); }, 30000);
   }
   document.getElementById("exportBtn").addEventListener("click", exportPng);
 
