@@ -37,6 +37,56 @@ const BRACKET_PATH = path.join(DATA_DIR, "bracket.json");
 let currentBracket = null; // latest { updated, rounds, groupStage } served to clients
 let lastFetchAt = null; // ISO timestamp of the last successful build
 
+// Tracks, per bracket slot (round+idx, keyed with the match date so a stale
+// slot from a previous edition can't leak into a new one), how much time has
+// been spent paused (half-time, VAR review stoppage, etc.) while the match is
+// live. This lives server-side — not in the browser — precisely so that a
+// client opening the page mid-second-half still sees a correct elapsed
+// minute: the server has been polling continuously since kickoff and knows
+// the real pause duration, whereas a fresh page load has no history of its
+// own to derive it from. The accumulated value is attached to each match as
+// `live.pausedMs` and shipped to every client in bracket.json.
+const matchPauseState = new Map();
+
+function pauseStateKey(round, idx, match) {
+  return `${round}-${idx}-${(match && match.date) || ""}`;
+}
+
+// Walks the freshly built bracket and, for every currently-live match, updates
+// (and attaches) how many milliseconds it has spent paused so far. Called
+// once per fetch cycle, right before the bracket is persisted/broadcast.
+function applyPauseTracking(bracket) {
+  const now = Date.now();
+  const seenKeys = new Set();
+  (bracket.rounds || []).forEach((round, r) => {
+    round.forEach((match, i) => {
+      if (!match || match.status !== "live" || !match.live) return;
+      const key = pauseStateKey(r, i, match);
+      seenKeys.add(key);
+      let state = matchPauseState.get(key);
+      if (!state) {
+        state = { totalPausedMs: 0, pauseStartedAt: null };
+        matchPauseState.set(key, state);
+      }
+      const apiStatus = (match.live.apiStatus || "").toUpperCase();
+      const isPaused = apiStatus !== "" && apiStatus !== "IN_PLAY" && apiStatus !== "LIVE";
+      if (isPaused && state.pauseStartedAt == null) {
+        state.pauseStartedAt = now;
+      } else if (!isPaused && state.pauseStartedAt != null) {
+        state.totalPausedMs += now - state.pauseStartedAt;
+        state.pauseStartedAt = null;
+      }
+      const ongoingPauseMs = state.pauseStartedAt != null ? now - state.pauseStartedAt : 0;
+      match.live.pausedMs = state.totalPausedMs + ongoingPauseMs;
+    });
+  });
+  // Drop tracking for slots that are no longer live (finished, or a stale
+  // entry from a previous edition) so the map doesn't grow unbounded.
+  for (const key of matchPauseState.keys()) {
+    if (!seenKeys.has(key)) matchPauseState.delete(key);
+  }
+}
+
 // Connected Server-Sent Events clients (Express `res` objects). This lives in
 // module memory, which is exactly why the process MUST stay single-instance
 // (see the header comment): a second PM2 worker would hold its own separate
@@ -51,6 +101,17 @@ function loadPersistedBracket() {
       currentBracket = JSON.parse(fs.readFileSync(BRACKET_PATH, "utf8"));
       if (currentBracket && !currentBracket.groupStage) currentBracket.groupStage = {};
       lastFetchAt = currentBracket && currentBracket.updated ? currentBracket.updated : null;
+      // Seed the pause tracker from the persisted pausedMs so a process
+      // restart mid-match doesn't forget the pause time accumulated so far.
+      (currentBracket.rounds || []).forEach((round, r) => {
+        round.forEach((match, i) => {
+          if (!match || match.status !== "live" || !match.live || match.live.pausedMs == null) return;
+          matchPauseState.set(pauseStateKey(r, i, match), {
+            totalPausedMs: match.live.pausedMs,
+            pauseStartedAt: null,
+          });
+        });
+      });
       console.log("Loaded persisted bracket from", BRACKET_PATH);
     }
   } catch (err) {
@@ -151,6 +212,7 @@ async function refreshBracket() {
     });
     if (!next) return; // nothing to do (API error or rate-limited)
     const events = detectChanges(previous, next);
+    applyPauseTracking(next);
     currentBracket = next;
     lastFetchAt = next.updated;
     persistBracket(next);

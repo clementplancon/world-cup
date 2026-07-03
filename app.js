@@ -845,43 +845,18 @@
   // The fallback minute estimate below is only used when the API doesn't send
   // an explicit live.minute. It derives the minute from wall-clock time since
   // kickoff, which would otherwise keep counting through half-time (and any
-  // other break in play) and overshoot the real elapsed playing time. This
-  // tracks, per match, how much time has been spent paused (status
-  // PAUSED/SUSPENDED/...) so it can be subtracted from the wall-clock elapsed.
-  const pauseTracking = new Map();
-
-  function matchTrackingKey(m){
-    const kickoff = matchTimeMs(m && m.date);
-    const home = m && m.home && m.home.code || "?";
-    const away = m && m.away && m.away.code || "?";
-    return `${home}-${away}-${kickoff}`;
-  }
-
-  function trackPausedMs(m){
-    const key = matchTrackingKey(m);
-    const status = getLiveApiStatus(m);
-    const isPaused = status !== "" && status !== "IN_PLAY" && status !== "LIVE";
-    let entry = pauseTracking.get(key);
-    if(!entry){
-      entry = { totalPausedMs: 0, pauseStartedAt: null, lastApiStatus: null };
-      pauseTracking.set(key, entry);
-    }
-    if(isPaused && entry.lastApiStatus !== status && entry.pauseStartedAt == null){
-      entry.pauseStartedAt = Date.now();
-    } else if(!isPaused && entry.pauseStartedAt != null){
-      entry.totalPausedMs += Date.now() - entry.pauseStartedAt;
-      entry.pauseStartedAt = null;
-    }
-    entry.lastApiStatus = status;
-    return entry.totalPausedMs;
-  }
-
-  function estimatedLiveMinute(m, pausedMs){
+  // other break in play) and overshoot the real elapsed playing time. The
+  // paused duration (m.live.pausedMs) is computed server-side — not tracked
+  // in the browser — precisely so that a client opening the page mid-second-
+  // half (with no history of the half-time break) still gets the correct
+  // value: the server has been polling since kickoff and already knows it.
+  function estimatedLiveMinute(m){
     const explicitMinute = numberOrNull(m && m.live && m.live.minute);
     if(explicitMinute != null && explicitMinute > 0) return explicitMinute;
     const kickoff = matchTimeMs(m && m.date);
     if(kickoff == null) return null;
-    const elapsed = Math.floor((Date.now() - kickoff - (pausedMs || 0)) / 60000) + 1;
+    const pausedMs = numberOrNull(m && m.live && m.live.pausedMs) || 0;
+    const elapsed = Math.floor((Date.now() - kickoff - pausedMs) / 60000) + 1;
     if(elapsed < 1) return null;
     return Math.min(elapsed, getLiveDuration(m) === "EXTRA_TIME" ? 120 : 90);
   }
@@ -903,13 +878,12 @@
 
   function formatLiveMatchStatus(m){
     if(!m || m.status !== "live") return t("live");
-    const pausedMs = trackPausedMs(m);
     if(getLiveApiStatus(m) === "PAUSED") return t("halfTime");
 
     const duration = getLiveDuration(m);
     if(duration === "PENALTY_SHOOTOUT") return t("penalties");
 
-    const minute = estimatedLiveMinute(m, pausedMs);
+    const minute = estimatedLiveMinute(m);
     const injuryTime = numberOrNull(m.live && m.live.injuryTime);
     const minuteText = formatLiveMinute(minute, injuryTime);
     const phases = [];
