@@ -199,7 +199,7 @@
   }
   .chip .chip-notify:hover{ opacity:1; }
   .chip .chip-notify.is-on{ opacity:1; filter:drop-shadow(0 0 3px var(--gold)); }
-  .chip .chip-notify[disabled]{ opacity:.35; cursor:default; }
+  .chip .chip-notify.is-blocked{ opacity:.55; }
   #followChip{ display:none; border-color:rgba(226,184,74,.4); cursor:pointer; }
   #followChip .chip-label{ color:var(--gold); font-weight:600; }
   #followGroupStage{
@@ -859,7 +859,8 @@
     const enabled = notificationsEnabled();
     const blocked = Notification.permission === "denied";
     btn.classList.toggle("is-on", enabled);
-    btn.disabled = blocked;
+    btn.classList.toggle("is-blocked", blocked);
+    btn.setAttribute("aria-disabled", blocked ? "true" : "false");
     btn.title = enabled ? t("notifyEnabled") : (blocked ? t("notifyBlocked") : t("notifyEnable"));
   }
   document.getElementById("followNotifyBtn").addEventListener("click", (e)=>{ e.stopPropagation(); enableNotifications(); });
