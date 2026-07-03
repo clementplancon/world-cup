@@ -1,14 +1,14 @@
 :root{
-    color-scheme:light;
-    --bg:#f7f3e8;
-    --bg-glow:#f2dca7;
-    --bg-alt:#ede5d3;
-    --panel:#fffaf0;
-    --panel-2:#fff6e4;
-    --line:#dfd1b5;
-    --text:#173126;
-    --text-dim:#65766d;
-    --text-faint:#8b9a91;
+  color-scheme:dark;
+  --bg:#0a1512;
+  --bg-glow:#16352a;
+  --bg-alt:#0e1c17;
+  --panel:#12241d;
+  --panel-2:#16291f;
+  --line:#22392f;
+  --text:#f2efe4;
+  --text-dim:#8fa89b;
+  --text-faint:#5c7268;
     --gold:#e2b84a;
     --live:#ff5f5a;
     --r1:#3fa66b;
@@ -16,30 +16,37 @@
     --r3:#c9b354;
     --r4:#dd8f4a;
     --r5:#e0555f;
-    --glass-panel:rgba(255,250,240,.88);
-    --bottom-bar-bg:rgba(247,243,232,.86);
-    --title-shadow:0 1px 3px rgba(255,255,255,.75), 0 0 18px rgba(255,255,255,.65);
-    --tooltip-shadow:0 10px 30px rgba(61,43,16,.18);
-    --gold-contrast:#241805;
-    --result-text:#08110e;
-    --bottom-bar-height:74px;
-  }
-  :root[data-theme="dark"]{
-    color-scheme:dark;
-    --bg:#0a1512;
-    --bg-glow:#16352a;
-    --bg-alt:#0e1c17;
-    --panel:#12241d;
-    --panel-2:#16291f;
-    --line:#22392f;
-    --text:#f2efe4;
-    --text-dim:#8fa89b;
-    --text-faint:#5c7268;
     --glass-panel:rgba(18,36,29,.88);
     --bottom-bar-bg:rgba(10,21,18,.82);
     --title-shadow:0 1px 3px rgba(0,0,0,.7), 0 0 20px rgba(0,0,0,.5);
     --tooltip-shadow:0 10px 30px rgba(0,0,0,.4);
     --gold-contrast:#1a1406;
+    --result-text:#08110e;
+    --bottom-bar-height:74px;
+  }
+  :root[data-theme="light"]{
+    color-scheme:light;
+    --bg:#edf4e8;
+    --bg-glow:#d2e0c6;
+    --bg-alt:#e1eadb;
+    --panel:#f8fbf3;
+    --panel-2:#f0f6eb;
+    --line:#bdcbb4;
+    --text:#102a20;
+    --text-dim:#43584e;
+    --text-faint:#67786f;
+    --gold:#9b812c;
+    --live:#c84a45;
+    --r1:#477d56;
+    --r2:#4f8971;
+    --r3:#8f853b;
+    --r4:#a86a3d;
+    --r5:#ad4450;
+    --glass-panel:rgba(248,251,243,.92);
+    --bottom-bar-bg:rgba(237,244,232,.9);
+    --title-shadow:0 1px 2px rgba(255,255,255,.8), 0 0 12px rgba(255,255,255,.5);
+    --tooltip-shadow:0 10px 26px rgba(41,62,45,.18);
+    --gold-contrast:#1b1404;
     --result-text:#08110e;
   }
   *{box-sizing:border-box;}

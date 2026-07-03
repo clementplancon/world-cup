@@ -92,8 +92,8 @@
   };
   let lang = localStorage.getItem("wc2026-lang") || "fr";
   function t(key){ return (I18N[lang] && I18N[lang][key]) || I18N.fr[key] || key; }
-  const THEME_COLORS = { light:"#f7f3e8", dark:"#0a1512" };
-  let theme = localStorage.getItem("wc2026-theme") === "dark" ? "dark" : "light";
+  const THEME_COLORS = { light:"#edf4e8", dark:"#0a1512" };
+  let theme = localStorage.getItem("wc2026-theme") === "light" ? "light" : "dark";
   document.documentElement.dataset.theme = theme;
 
   // FIFA code -> flagcdn.com country code (some UK nations use flagcdn's
