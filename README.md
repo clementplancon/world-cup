@@ -57,7 +57,7 @@ football-data.org --(toutes les 2 min)--> server.js (lib/bracket.js)
 ```
 
 - **`lib/bracket.js`** : toute la logique métier (topologie du tableau,
-  `buildRounds`, `isInsideAMatchWindow`, `fetchAndBuildBracket`). Partagée entre
+  `buildRounds`, `fetchAndBuildBracket`). Partagée entre
   le serveur et le CLI — une seule source de vérité.
 - **`scripts/fetch-data.js`** : conservé comme CLI manuel one-shot
   (`FOOTBALL_DATA_API_KEY=... node scripts/fetch-data.js`).
@@ -186,12 +186,12 @@ world-cup-data.pointvirgule.dev {
 }
 ```
 
-### Optimisation rate-limit
+### Fréquence des requêtes
 
-`fetchAndBuildBracket` n'appelle l'API que dans une fenêtre autour d'un match
-(`isInsideAMatchWindow`) dès qu'un tableau est déjà en mémoire, afin de rester
-sous la limite de 10 req/min de football-data.org. Au premier démarrage (aucune
-donnée), un fetch immédiat est effectué pour amorcer le tableau.
+`fetchAndBuildBracket` interroge football-data.org à **chaque** cycle : le
+serveur sonde toutes les 2 min (`FETCH_INTERVAL_MS`), soit bien en dessous de la
+limite de 10 req/min de football-data.org. Il récupère donc l'état courant en
+permanence — match en cours ou non — sans logique de fenêtre autour des matchs.
 
 ## Notes
 

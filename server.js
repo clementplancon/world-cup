@@ -147,9 +147,8 @@ async function refreshBracket() {
     const previous = currentBracket;
     const next = await fetchAndBuildBracket({
       apiKey: process.env.FOOTBALL_DATA_API_KEY,
-      previousData: currentBracket,
     });
-    if (!next) return; // nothing to do (outside window, rate-limited, or error)
+    if (!next) return; // nothing to do (API error or rate-limited)
     const events = detectChanges(previous, next);
     currentBracket = next;
     lastFetchAt = next.updated;

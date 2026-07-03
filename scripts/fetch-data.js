@@ -20,9 +20,7 @@ async function main() {
     process.exit(1);
   }
 
-  // Pass previousData: null so a manual run always hits the API and produces a
-  // file, even outside a match window.
-  const output = await fetchAndBuildBracket({ apiKey: key, previousData: null });
+  const output = await fetchAndBuildBracket({ apiKey: key });
   if (!output) {
     console.warn("No bracket produced (API error or rate limited) — leaving existing bracket.json untouched.");
     return;
