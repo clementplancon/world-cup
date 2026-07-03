@@ -31,6 +31,7 @@
       topScorers:"Meilleurs buteurs", topAssists:"Meilleures passes décisives", bestTeams:"Meilleures équipes",
       recentMatches:"Derniers matchs", goals:"Buts", assistsShort:"Passes", played:"J", wins:"V", draws:"N", losses:"D", diff:"Diff",
       close:"Fermer", noStats:"Statistiques pas encore disponibles.", statsUpdated:"Mis à jour",
+      themeSwitchToDark:"Passer au thème sombre", themeSwitchToLight:"Passer au thème clair",
       dIn:"dans", jShort:"j", hShort:"h", minShort:"min",
       probabilityNote:"Pourcentages = estimation de victoire calculée avec une note pondérée (Elo 60 %, classement FIFA 25 %, forme récente 15 %), puis limitée entre 5 % et 95 %.",
     },
@@ -57,6 +58,7 @@
       topScorers:"Top scorers", topAssists:"Top assists", bestTeams:"Best teams",
       recentMatches:"Recent matches", goals:"Goals", assistsShort:"Assists", played:"P", wins:"W", draws:"D", losses:"L", diff:"Diff",
       close:"Close", noStats:"Stats not available yet.", statsUpdated:"Updated",
+      themeSwitchToDark:"Switch to dark theme", themeSwitchToLight:"Switch to light theme",
       dIn:"in", jShort:"d", hShort:"h", minShort:"m",
       probabilityNote:"Percentages are win estimates based on a weighted rating (Elo 60%, FIFA ranking 25%, recent form 15%), then capped between 5% and 95%.",
     },
@@ -83,12 +85,16 @@
       topScorers:"Máximos goleadores", topAssists:"Máximas asistencias", bestTeams:"Mejores equipos",
       recentMatches:"Últimos partidos", goals:"Goles", assistsShort:"Asist.", played:"J", wins:"G", draws:"E", losses:"P", diff:"Dif",
       close:"Cerrar", noStats:"Estadísticas aún no disponibles.", statsUpdated:"Actualizado",
+      themeSwitchToDark:"Cambiar al tema oscuro", themeSwitchToLight:"Cambiar al tema claro",
       dIn:"en", jShort:"d", hShort:"h", minShort:"min",
       probabilityNote:"Los porcentajes son estimaciones de victoria basadas en una valoración ponderada (Elo 60 %, ranking FIFA 25 %, forma reciente 15 %) y limitadas entre 5 % y 95 %.",
     },
   };
   let lang = localStorage.getItem("wc2026-lang") || "fr";
   function t(key){ return (I18N[lang] && I18N[lang][key]) || I18N.fr[key] || key; }
+  const THEME_COLORS = { light:"#f7f3e8", dark:"#0a1512" };
+  let theme = localStorage.getItem("wc2026-theme") === "dark" ? "dark" : "light";
+  document.documentElement.dataset.theme = theme;
 
   // FIFA code -> flagcdn.com country code (some UK nations use flagcdn's
   // subdivision flags). Covers the 48 qualified nations, with a few common
@@ -975,6 +981,7 @@
       btn.style.opacity = ".5";
       const size = 1600;
       const clone = svg.cloneNode(true);
+      clone.setAttribute("data-theme", theme);
       clone.setAttribute("width", size);
       clone.setAttribute("height", size);
       clone.setAttribute("viewBox", "0 0 960 960");
@@ -988,7 +995,7 @@
       const bg = document.createElementNS(NS, "rect");
       bg.setAttribute("x","-40"); bg.setAttribute("y","-40");
       bg.setAttribute("width","1040"); bg.setAttribute("height","1040");
-      bg.setAttribute("fill","#0a1512");
+      bg.setAttribute("fill", getComputedStyle(document.documentElement).getPropertyValue("--bg").trim() || THEME_COLORS[theme]);
       clone.insertBefore(bg, clone.firstChild);
 
       // Embed the page's stylesheet inside the SVG itself. Standalone SVG
@@ -999,7 +1006,7 @@
       // the stylesheet's ":root{...}" block becomes the SVG's own root once
       // parsed standalone, copying it verbatim fixes every var() at once.
       const styleEl = document.createElementNS(NS, "style");
-      styleEl.textContent = document.querySelector("style").textContent +
+      styleEl.textContent = getPageCssText() +
         `\nsvg{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Inter,Helvetica,Arial,sans-serif;}`;
       clone.insertBefore(styleEl, clone.firstChild);
 
@@ -1064,6 +1071,13 @@
     setTimeout(()=>{ URL.revokeObjectURL(blobUrl); }, 30000);
   }
   document.getElementById("exportBtn").addEventListener("click", exportPng);
+
+  function getPageCssText(){
+    return Array.from(document.styleSheets).map(sheet=>{
+      try{ return Array.from(sheet.cssRules).map(rule=> rule.cssText).join("\n"); }
+      catch(err){ return ""; }
+    }).join("\n");
+  }
 
   /* ============ Pinch / pan / wheel zoom ============ */
   const zoomState = { scale: 1, x: 0, y: 0 };
@@ -1259,6 +1273,7 @@
   const LANG_ORDER = ["fr", "en", "es"];
   function applyStaticTranslations(){
     document.getElementById("langBtn").textContent = lang.toUpperCase();
+    applyTheme();
     document.getElementById("headerTitleText").textContent = t("headerTitle");
     document.getElementById("headerSubtitleText").textContent = t("headerSubtitle");
     document.getElementById("subtitleText").innerHTML = t("subtitle");
@@ -1286,6 +1301,24 @@
     const next = LANG_ORDER[(LANG_ORDER.indexOf(lang) + 1) % LANG_ORDER.length];
     setLang(next);
   });
+  function applyTheme(){
+    document.documentElement.dataset.theme = theme;
+    const metaTheme = document.querySelector('meta[name="theme-color"]');
+    if(metaTheme) metaTheme.setAttribute("content", THEME_COLORS[theme]);
+    const btn = document.getElementById("themeBtn");
+    if(btn){
+      const label = t(theme === "dark" ? "themeSwitchToLight" : "themeSwitchToDark");
+      btn.textContent = theme === "dark" ? "☀️" : "🌙";
+      btn.title = label;
+      btn.setAttribute("aria-label", label);
+    }
+  }
+  document.getElementById("themeBtn").addEventListener("click", ()=>{
+    theme = theme === "dark" ? "light" : "dark";
+    localStorage.setItem("wc2026-theme", theme);
+    applyTheme();
+  });
+  applyTheme();
   applyStaticTranslations();
   updateBottomBarOffset();
 
