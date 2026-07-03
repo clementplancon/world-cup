@@ -1114,15 +1114,6 @@
         if(team && team.code){
           leafG.addEventListener("click", (e)=>{ e.stopPropagation(); followTeam(team.code); });
         }
-        if(team && team.name){
-          leafG.addEventListener("mouseenter", (e)=>{
-            tooltip.innerHTML = `<div class="tt-teams">${team.name}</div>` + (eliminated.has(team.code) ? `<div class="tt-meta">${t("eliminated")}</div>` : "");
-            tooltip.classList.add("show");
-            moveTooltip(e);
-          });
-          leafG.addEventListener("mousemove", moveTooltip);
-          leafG.addEventListener("mouseleave", hideTooltip);
-        }
       });
     }
 
