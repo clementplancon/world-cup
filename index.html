@@ -200,8 +200,88 @@
   .chip .chip-notify:hover{ opacity:1; }
   .chip .chip-notify.is-on{ opacity:1; filter:drop-shadow(0 0 3px var(--gold)); }
   .chip .chip-notify[disabled]{ opacity:.35; cursor:default; }
-  #followChip{ display:none; border-color:rgba(226,184,74,.4); }
+  #followChip{ display:none; border-color:rgba(226,184,74,.4); cursor:pointer; }
   #followChip .chip-label{ color:var(--gold); font-weight:600; }
+  #followGroupStage{
+    display:none;
+    pointer-events:auto;
+    width:min(78vw, 320px);
+    background:rgba(18,36,29,.88);
+    backdrop-filter:blur(10px);
+    -webkit-backdrop-filter:blur(10px);
+    border:1px solid rgba(226,184,74,.28);
+    border-radius:14px;
+    padding:10px;
+  }
+  #followGroupStage .group-stage-title{
+    color:var(--gold);
+    font-size:11px;
+    font-weight:800;
+    letter-spacing:.04em;
+    text-transform:uppercase;
+    margin:0 0 8px;
+  }
+  #followGroupStage .group-stage-list{
+    display:flex;
+    flex-direction:column;
+    gap:6px;
+  }
+  #followGroupStage .group-stage-match{
+    display:grid;
+    grid-template-columns:18px minmax(0, 1fr) auto 16px;
+    align-items:center;
+    gap:8px;
+    background:var(--panel-2);
+    border:1px solid var(--line);
+    border-radius:8px;
+    padding:7px 8px;
+    cursor:default;
+  }
+  #followGroupStage .group-stage-match img{
+    width:18px;
+    height:18px;
+    border-radius:50%;
+    object-fit:cover;
+    border:1px solid var(--line);
+  }
+  #followGroupStage .group-stage-flag-fallback{
+    width:18px;
+    height:18px;
+    border-radius:50%;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    background:var(--panel);
+    border:1px solid var(--line);
+    color:var(--text-faint);
+    font-size:10px;
+    font-weight:700;
+  }
+  #followGroupStage .group-stage-opponent{
+    color:var(--text);
+    font-size:11px;
+    font-weight:600;
+    overflow:hidden;
+    text-overflow:ellipsis;
+    white-space:nowrap;
+  }
+  #followGroupStage .group-stage-score{
+    color:var(--text-dim);
+    font-size:11px;
+    font-variant-numeric:tabular-nums;
+    font-weight:700;
+  }
+  #followGroupStage .group-stage-result{
+    width:16px;
+    height:16px;
+    border-radius:50%;
+    color:#08110e;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    font-size:9px;
+    font-weight:800;
+  }
   #nextMatchChip{ display:none; cursor:pointer; }
   #nextMatchChip .chip-countdown{ color:var(--text); font-variant-numeric:tabular-nums; font-weight:700; }
   #nextMatchChip.is-live .chip-countdown{ color:var(--live); }
@@ -210,6 +290,7 @@
   @media (max-width: 640px){
     .chip-stack{ top:104px; right:10px; }
     .chip{ max-width:min(70vw, 280px); font-size:11px; }
+    #followGroupStage{ width:min(70vw, 280px); }
   }
 
   .action-stack{
@@ -439,6 +520,7 @@
     <button class="chip-notify" id="followNotifyBtn" title="Activer les notifications">🔔</button>
     <button class="chip-close" id="followClearBtn" title="Ne plus suivre">✕</button>
   </div>
+  <div id="followGroupStage"></div>
 </div>
 
 <div class="bottom-bar">
@@ -465,6 +547,7 @@
       round32:"32es de finale", round16:"8es de finale", roundQF:"Quarts de finale", roundSF:"Demi-finales", roundF:"Finale",
       statusFinal:"Terminé", statusLive:"En direct", eliminated:"Éliminé", estimate:"estimation",
       following:"Suivi : ",
+      groupStage:"Phase de groupes",
       notifyEnable:"🔔 Activer les notifications", notifyEnabled:"🔔 Notifications activées",
       notifyBlocked:"Notifications bloquées dans le navigateur", notifyUnsupported:"Notifications non supportées sur cet appareil",
       notifyError:"Impossible d'activer les notifications",
@@ -490,6 +573,7 @@
       round32:"Round of 32", round16:"Round of 16", roundQF:"Quarter-finals", roundSF:"Semi-finals", roundF:"Final",
       statusFinal:"Finished", statusLive:"Live", eliminated:"Eliminated", estimate:"estimate",
       following:"Following: ",
+      groupStage:"Group stage",
       notifyEnable:"🔔 Enable notifications", notifyEnabled:"🔔 Notifications on",
       notifyBlocked:"Notifications blocked in the browser", notifyUnsupported:"Notifications not supported on this device",
       notifyError:"Couldn't enable notifications",
@@ -515,6 +599,7 @@
       round32:"Dieciseisavos", round16:"Octavos de final", roundQF:"Cuartos de final", roundSF:"Semifinales", roundF:"Final",
       statusFinal:"Finalizado", statusLive:"En vivo", eliminated:"Eliminado", estimate:"estimación",
       following:"Siguiendo: ",
+      groupStage:"Fase de grupos",
       notifyEnable:"🔔 Activar notificaciones", notifyEnabled:"🔔 Notificaciones activas",
       notifyBlocked:"Notificaciones bloqueadas en el navegador", notifyUnsupported:"Notificaciones no compatibles en este dispositivo",
       notifyError:"No se pudieron activar las notificaciones",
@@ -564,8 +649,10 @@
 
   /* ============ STATE ============ */
   let rounds = [];
+  let groupStage = {};
   let eliminated = new Set(); // team codes knocked out
   let followedCode = localStorage.getItem("wc2026-follow") || null; // team the user is "following" (path highlight + push)
+  let followGroupExpanded = false;
   let hasPlayedEntrance = false; // only animate the very first time real data loads
 
   function computeEliminated(){
@@ -618,6 +705,7 @@
 
   function followTeam(code){
     setFollowedCode(followedCode === code ? null : code);
+    followGroupExpanded = false;
     render();
     updateFollowChip();
     // A newly followed team should push notifications there too, if the user
@@ -627,14 +715,59 @@
 
   function updateFollowChip(){
     const chip = document.getElementById("followChip");
-    if(!followedCode){ chip.style.display = "none"; return; }
+    if(!followedCode){
+      chip.style.display = "none";
+      renderFollowGroupStage();
+      return;
+    }
     const img = document.getElementById("followFlag");
     const label = document.getElementById("followLabel");
     const url = flagUrl(followedCode);
     if(url){ img.src = url; img.style.display = "block"; } else { img.style.display = "none"; }
     label.textContent = t("following") + getTeamName(followedCode);
     chip.style.display = "flex";
+    chip.setAttribute("aria-expanded", followGroupExpanded ? "true" : "false");
     updateNotifyButton();
+    renderFollowGroupStage();
+  }
+  function resultColor(result){
+    if(result === "W") return "var(--r1)";
+    if(result === "D") return "var(--r3)";
+    return "var(--r5)";
+  }
+  function escapeHtml(value){
+    return String(value == null ? "" : value)
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;")
+      .replace(/"/g, "&quot;")
+      .replace(/'/g, "&#39;");
+  }
+  function renderFollowGroupStage(){
+    const panel = document.getElementById("followGroupStage");
+    if(!panel) return;
+    const matches = followedCode && groupStage ? groupStage[followedCode] : null;
+    if(!followedCode || !followGroupExpanded || !matches || matches.length === 0){
+      panel.style.display = "none";
+      panel.innerHTML = "";
+      return;
+    }
+    const rows = matches.map((m) => {
+      const opponent = m.opponent || {};
+      const url = flagUrl(opponent.code);
+      const flag = url
+        ? `<img src="${url}" alt="">`
+        : `<span class="group-stage-flag-fallback">${escapeHtml(opponent.code ? opponent.code[0] : "?")}</span>`;
+      return `
+        <div class="match-node group-stage-match">
+          ${flag}
+          <span class="group-stage-opponent">${escapeHtml(opponent.name || opponent.code || t("tbd"))}</span>
+          <span class="group-stage-score">${escapeHtml(m.teamScore)} – ${escapeHtml(m.opponentScore)}</span>
+          <span class="group-stage-result" style="background:${resultColor(m.result)}">${escapeHtml(m.result)}</span>
+        </div>`;
+    }).join("");
+    panel.innerHTML = `<div class="group-stage-title">${t("groupStage")}</div><div class="group-stage-list">${rows}</div>`;
+    panel.style.display = "block";
   }
   function getTeamName(code){
     // Pull the display name from whatever's currently loaded, falling back to the code itself.
@@ -646,7 +779,13 @@
     }
     return code;
   }
-  document.getElementById("followClearBtn").addEventListener("click", ()=>{ setFollowedCode(null); render(); updateFollowChip(); });
+  document.getElementById("followChip").addEventListener("click", ()=>{
+    const matches = followedCode && groupStage ? groupStage[followedCode] : null;
+    if(!matches || matches.length === 0) return;
+    followGroupExpanded = !followGroupExpanded;
+    updateFollowChip();
+  });
+  document.getElementById("followClearBtn").addEventListener("click", (e)=>{ e.stopPropagation(); followGroupExpanded = false; setFollowedCode(null); render(); updateFollowChip(); });
 
   /* ============ Web Push notifications (Phase 2) ============ */
   // The data server (same origin as DATA_URL) can send a system notification to
@@ -723,7 +862,7 @@
     btn.disabled = blocked;
     btn.title = enabled ? t("notifyEnabled") : (blocked ? t("notifyBlocked") : t("notifyEnable"));
   }
-  document.getElementById("followNotifyBtn").addEventListener("click", enableNotifications);
+  document.getElementById("followNotifyBtn").addEventListener("click", (e)=>{ e.stopPropagation(); enableNotifications(); });
 
   /* ============ DOM ============ */
   const svg = document.getElementById("bracket");
@@ -1162,6 +1301,7 @@
   // fetch() fallback and the SSE stream so both paths render identically.
   function applyBracket(data){
     rounds = (data && data.rounds) || [];
+    groupStage = (data && data.groupStage) || {};
     const shouldAnimate = !hasPlayedEntrance && rounds.length > 0;
     if(!rounds.length){
       setEmptyMessage(t("emptyWaitTitle"), t("emptyWaitText"));
