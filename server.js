@@ -68,8 +68,12 @@ function applyPauseTracking(bracket) {
         state = { totalPausedMs: 0, pauseStartedAt: null };
         matchPauseState.set(key, state);
       }
+      // Only PAUSED (half-time) and SUSPENDED (e.g. weather/crowd stoppage)
+      // are genuine breaks in play. EXTRA_TIME and PENALTY_SHOOTOUT are still
+      // part of the live action and must NOT accrue pause time, otherwise the
+      // estimated minute would freeze/drift once a match goes past 90'.
       const apiStatus = (match.live.apiStatus || "").toUpperCase();
-      const isPaused = apiStatus !== "" && apiStatus !== "IN_PLAY" && apiStatus !== "LIVE";
+      const isPaused = apiStatus === "PAUSED" || apiStatus === "SUSPENDED";
       if (isPaused && state.pauseStartedAt == null) {
         state.pauseStartedAt = now;
       } else if (!isPaused && state.pauseStartedAt != null) {
