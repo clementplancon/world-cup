@@ -842,12 +842,21 @@
     return (m && m.live && m.live.apiStatus ? String(m.live.apiStatus) : "").toUpperCase();
   }
 
+  // The fallback minute estimate below is only used when the API doesn't send
+  // an explicit live.minute. It derives the minute from wall-clock time since
+  // kickoff, which would otherwise keep counting through half-time (and any
+  // other break in play) and overshoot the real elapsed playing time. The
+  // paused duration (m.live.pausedMs) is computed server-side — not tracked
+  // in the browser — precisely so that a client opening the page mid-second-
+  // half (with no history of the half-time break) still gets the correct
+  // value: the server has been polling since kickoff and already knows it.
   function estimatedLiveMinute(m){
     const explicitMinute = numberOrNull(m && m.live && m.live.minute);
     if(explicitMinute != null && explicitMinute > 0) return explicitMinute;
     const kickoff = matchTimeMs(m && m.date);
     if(kickoff == null) return null;
-    const elapsed = Math.floor((Date.now() - kickoff) / 60000) + 1;
+    const pausedMs = numberOrNull(m && m.live && m.live.pausedMs) || 0;
+    const elapsed = Math.floor((Date.now() - kickoff - pausedMs) / 60000) + 1;
     if(elapsed < 1) return null;
     return Math.min(elapsed, getLiveDuration(m) === "EXTRA_TIME" ? 120 : 90);
   }
