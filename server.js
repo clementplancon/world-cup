@@ -4,7 +4,7 @@
 // data/bracket.json to the repo, this process polls football-data.org every
 // 2 minutes, keeps the latest bracket in memory, and serves it over HTTP at
 // the exact same path/shape the front-end already expects (GET /bracket.json
-// -> { updated, rounds }).
+// -> { updated, rounds, groupStage }).
 //
 // IMPORTANT — SINGLE INSTANCE ONLY:
 // Later phases keep per-connection state (SSE clients) in module memory. This
@@ -34,7 +34,7 @@ const BRACKET_PATH = path.join(DATA_DIR, "bracket.json");
 // ---------------------------------------------------------------------------
 // In-memory state
 // ---------------------------------------------------------------------------
-let currentBracket = null; // latest { updated, rounds } served to clients
+let currentBracket = null; // latest { updated, rounds, groupStage } served to clients
 let lastFetchAt = null; // ISO timestamp of the last successful build
 
 // Connected Server-Sent Events clients (Express `res` objects). This lives in
@@ -49,6 +49,7 @@ function loadPersistedBracket() {
   try {
     if (fs.existsSync(BRACKET_PATH)) {
       currentBracket = JSON.parse(fs.readFileSync(BRACKET_PATH, "utf8"));
+      if (currentBracket && !currentBracket.groupStage) currentBracket.groupStage = {};
       lastFetchAt = currentBracket && currentBracket.updated ? currentBracket.updated : null;
       console.log("Loaded persisted bracket from", BRACKET_PATH);
     }
@@ -175,7 +176,7 @@ app.use(express.json()); // parse JSON bodies for the /api/subscribe endpoints
 app.get("/bracket.json", (req, res) => {
   res.set("Access-Control-Allow-Origin", "*");
   res.set("Cache-Control", "no-cache, must-revalidate");
-  res.json(currentBracket || { updated: null, rounds: [] });
+  res.json(currentBracket || { updated: null, rounds: [], groupStage: {} });
 });
 
 app.get("/health", (req, res) => {
