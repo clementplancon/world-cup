@@ -522,13 +522,19 @@
 
     el("circle", {class:"ring-guide", cx, cy, r: outerR, style:"stroke:var(--line);stroke-width:1;opacity:.35"}, svg);
 
-    function pathEl(d, colorVar, onPath){
+    function edgeVisual(colorVar, onPath, eliminatedSegment){
+      return {
+        width: onPath ? 3 : 1,
+        stroke: eliminatedSegment ? "--text-faint" : colorVar,
+        opacity: onPath ? (eliminatedSegment ? ELIMINATED_EDGE_OPACITY : 1) : DIM
+      };
+    }
+    function pathEl(d, colorVar, onPath, eliminatedSegment){
       const p = document.createElementNS(NS,"path");
       p.setAttribute("class","edge");
       p.setAttribute("d", d);
-      const opacity = onPath ? 1 : DIM;
-      const width = onPath ? 3 : 1;
-      p.setAttribute("style", `stroke:var(${colorVar});stroke-width:${width};opacity:${opacity}`);
+      const { width, stroke, opacity } = edgeVisual(colorVar, onPath, eliminatedSegment);
+      p.setAttribute("style", `stroke:var(${stroke});stroke-width:${width};opacity:${opacity}`);
       return p;
     }
     function leafCodeAt(idx){
@@ -556,7 +562,7 @@
       for(let i=0;i<matches.length;i++){
         const a1 = childAngles[i*2];
         const a2 = childAngles[i*2+1];
-        const parentOnPath = !pathInfo || pathInfo.matchIndices[parentRoundIdx] === i;
+        const parentA = parentAngles[i];
         [a1,a2].forEach((a,c)=>{
           const childPos = i*2+c;
           const childOnPath = !pathInfo || (childRoundIdx === -1
@@ -566,15 +572,14 @@
           const eliminatedSegment = eliminatedSegmentInfo(segmentCode, childRoundIdx, childPos, parentRoundIdx, i);
           const p1 = polar(cx,cy,childR,a);
           const p2 = polar(cx,cy,parentR,a);
-          const width = childOnPath ? 3 : 1;
-          const stroke = eliminatedSegment ? "--text-faint" : colorVar;
-          const opacity = childOnPath ? (eliminatedSegment ? ELIMINATED_EDGE_OPACITY : 1) : DIM;
+          const { width, stroke, opacity } = edgeVisual(colorVar, childOnPath, eliminatedSegment);
           const lineEl = el("line", {class:"edge", x1:p1.x, y1:p1.y, x2:p2.x, y2:p2.y, style:`stroke:var(${stroke});stroke-width:${width};opacity:${opacity}`}, svg);
           revealDraw(lineEl, delay);
+          const arcD = c === 0 ? arcPath(cx,cy,parentR,a,parentA) : arcPath(cx,cy,parentR,parentA,a);
+          const arcElNode = pathEl(arcD, colorVar, childOnPath, eliminatedSegment);
+          svg.appendChild(arcElNode);
+          revealDraw(arcElNode, delay);
         });
-        const arcElNode = pathEl(arcPath(cx,cy,parentR,a1,a2), colorVar, parentOnPath);
-        svg.appendChild(arcElNode);
-        revealDraw(arcElNode, delay);
       }
     }
 
