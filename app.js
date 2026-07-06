@@ -456,7 +456,14 @@
     emptyOverlay.style.display = "none";
     computeEliminated();
     const pathInfo = followedCode ? computePath(followedCode) : null;
+    const eliminatedPaths = new Map();
+    eliminated.forEach((code)=>{
+      const info = computePath(code);
+      if(info && info.eliminatedRound !== -1) eliminatedPaths.set(code, info);
+    });
     const DIM = 0.15;
+    const ELIMINATED_LEAF_DIM = 0.55;
+    const ELIMINATED_EDGE_OPACITY = 0.5;
 
     const revealQueue = []; // { el, prop, target } — flipped to target state on the next frame
 
@@ -524,6 +531,25 @@
       p.setAttribute("style", `stroke:var(${colorVar});stroke-width:${width};opacity:${opacity}`);
       return p;
     }
+    function leafCodeAt(idx){
+      const m = rounds[0] && rounds[0][Math.floor(idx/2)];
+      const team = m && (idx % 2 === 0 ? m.home : m.away);
+      return team && team.code ? team.code : null;
+    }
+    function matchWinnerCode(roundIdx, matchIdx){
+      const m = rounds[roundIdx] && rounds[roundIdx][matchIdx];
+      if(!m || m.status !== "final" || !m.winner) return null;
+      const team = m.winner === "home" ? m.home : m.away;
+      return team && team.code ? team.code : null;
+    }
+    function eliminatedSegmentInfo(code, childRoundIdx, childPos, parentRoundIdx, parentPos){
+      const info = code ? eliminatedPaths.get(code) : null;
+      if(!info || parentRoundIdx > info.eliminatedRound) return null;
+      const isOwnSegment = childRoundIdx === -1
+        ? info.leafIdx === childPos && info.matchIndices[0] === parentPos
+        : info.matchIndices[childRoundIdx] === childPos && info.matchIndices[parentRoundIdx] === parentPos;
+      return isOwnSegment ? info : null;
+    }
     function drawEdges(childAngles, childR, matches, parentAngles, parentR, colorVar, childRoundIdx){
       const parentRoundIdx = childRoundIdx + 1;
       const delay = ENTRANCE_STEP_MS * (parentRoundIdx + 1);
@@ -536,10 +562,14 @@
           const childOnPath = !pathInfo || (childRoundIdx === -1
             ? pathInfo.leafIdx === childPos
             : (pathInfo.matchIndices[childRoundIdx] === childPos && pathInfo.matchIndices[parentRoundIdx] === i));
+          const segmentCode = childRoundIdx === -1 ? leafCodeAt(childPos) : matchWinnerCode(childRoundIdx, childPos);
+          const eliminatedSegment = eliminatedSegmentInfo(segmentCode, childRoundIdx, childPos, parentRoundIdx, i);
           const p1 = polar(cx,cy,childR,a);
           const p2 = polar(cx,cy,parentR,a);
           const width = childOnPath ? 3 : 1;
-          const lineEl = el("line", {class:"edge", x1:p1.x, y1:p1.y, x2:p2.x, y2:p2.y, style:`stroke:var(${colorVar});stroke-width:${width};opacity:${childOnPath?1:DIM}`}, svg);
+          const stroke = eliminatedSegment ? "--text-faint" : colorVar;
+          const opacity = childOnPath ? (eliminatedSegment ? ELIMINATED_EDGE_OPACITY : 1) : DIM;
+          const lineEl = el("line", {class:"edge", x1:p1.x, y1:p1.y, x2:p2.x, y2:p2.y, style:`stroke:var(${stroke});stroke-width:${width};opacity:${opacity}`}, svg);
           revealDraw(lineEl, delay);
         });
         const arcElNode = pathEl(arcPath(cx,cy,parentR,a1,a2), colorVar, parentOnPath);
@@ -558,6 +588,7 @@
     for(let i=0;i<round0.length;i++){
       const m = round0[i];
       [ [m.home, i*2], [m.away, i*2+1] ].forEach(([team, idx])=>{
+        const isEliminated = team && team.code && eliminated.has(team.code);
         const a = leafAngles[idx];
         const flip = a >= 180; // bottom half of the circle: rotate 180° more so text isn't upside down
         const onPath = !pathInfo || pathInfo.leafIdx === idx;
@@ -565,8 +596,8 @@
         const labelP = polar(cx, cy, outerR + 24, a);
 
         const leafG = el("g", {
-          class: "leaf-group",
-          style: `opacity:${onPath ? 1 : DIM};${team && team.code ? "cursor:pointer" : ""}`
+          class: "leaf-group" + (isEliminated ? " eliminated" : ""),
+          style: `opacity:${onPath ? (isEliminated ? ELIMINATED_LEAF_DIM : 1) : DIM};${team && team.code ? "cursor:pointer" : ""}`
         }, svg);
 
         // One generous invisible hit target covering flag + label together,
@@ -577,7 +608,7 @@
         const flagG = drawFlag(leafG, flagP.x, flagP.y, 9, team && team.code);
 
         const t = el("text", {
-          class: "leaf-label" + (team && team.name ? "" : " empty") + (team && team.code && eliminated.has(team.code) ? " eliminated" : ""),
+          class: "leaf-label" + (team && team.name ? "" : " empty") + (isEliminated ? " eliminated" : ""),
           x: labelP.x, y: labelP.y,
           "text-anchor": flip ? "end" : "start",
           transform: `rotate(${a-90+(flip?180:0)}, ${labelP.x}, ${labelP.y})`
