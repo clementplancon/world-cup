@@ -173,7 +173,8 @@
 
   .flag-bubble circle.ring{ fill:var(--panel); stroke:var(--line); stroke-width:1; }
   .flag-bubble image{ transition:filter .2s, opacity .2s; }
-  .flag-bubble.eliminated image{ filter:grayscale(1); opacity:.4; }
+  .flag-bubble.eliminated circle.ring{ stroke:var(--text-faint); opacity:.55; }
+  .flag-bubble.eliminated image{ filter:grayscale(1); opacity:.28; }
   .flag-bubble.followed circle.ring{ stroke:var(--gold); stroke-width:2.5; }
 
   /* ---------- Floating chips (follow / next match) ---------- */
@@ -346,7 +347,7 @@
     letter-spacing:.02em;
   }
   .leaf-label.empty{ fill:var(--text-faint); font-weight:500; }
-  .leaf-label.eliminated{ fill:var(--text-faint); }
+  .leaf-label.eliminated{ fill:var(--text-faint); opacity:.65; }
 
   .edge{
     fill:none;
