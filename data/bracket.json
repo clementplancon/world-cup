@@ -21,7 +21,8 @@
         },
         "status": "final",
         "winner": "away",
-        "date": "2026-06-29T20:30:00Z"
+        "date": "2026-06-29T20:30:00Z",
+        "city": "Boston"
       },
       {
         "home": {
@@ -39,7 +40,8 @@
         "penalties": null,
         "status": "final",
         "winner": "home",
-        "date": "2026-06-30T21:00:00Z"
+        "date": "2026-06-30T21:00:00Z",
+        "city": "New York/New Jersey"
       },
       {
         "home": {
@@ -57,7 +59,8 @@
         "penalties": null,
         "status": "final",
         "winner": "away",
-        "date": "2026-06-28T19:00:00Z"
+        "date": "2026-06-28T19:00:00Z",
+        "city": "Los Angeles"
       },
       {
         "home": {
@@ -78,7 +81,8 @@
         },
         "status": "final",
         "winner": "away",
-        "date": "2026-06-30T01:00:00Z"
+        "date": "2026-06-30T01:00:00Z",
+        "city": "Monterrey"
       },
       {
         "home": {
@@ -100,7 +104,8 @@
         "probabilities": {
           "home": 62,
           "away": 38
-        }
+        },
+        "city": "Toronto"
       },
       {
         "home": {
@@ -122,7 +127,8 @@
         "probabilities": {
           "home": 80,
           "away": 20
-        }
+        },
+        "city": "Los Angeles"
       },
       {
         "home": {
@@ -144,7 +150,8 @@
         "probabilities": {
           "home": 76,
           "away": 24
-        }
+        },
+        "city": "San Francisco Bay Area"
       },
       {
         "home": {
@@ -166,7 +173,8 @@
         "probabilities": {
           "home": 69,
           "away": 31
-        }
+        },
+        "city": "Seattle"
       },
       {
         "home": {
@@ -184,7 +192,8 @@
         "penalties": null,
         "status": "final",
         "winner": "home",
-        "date": "2026-06-29T17:00:00Z"
+        "date": "2026-06-29T17:00:00Z",
+        "city": "Houston"
       },
       {
         "home": {
@@ -202,7 +211,8 @@
         "penalties": null,
         "status": "final",
         "winner": "away",
-        "date": "2026-06-30T17:00:00Z"
+        "date": "2026-06-30T17:00:00Z",
+        "city": "Dallas"
       },
       {
         "home": {
@@ -220,7 +230,8 @@
         "penalties": null,
         "status": "final",
         "winner": "home",
-        "date": "2026-07-01T01:00:00Z"
+        "date": "2026-07-01T01:00:00Z",
+        "city": "Mexico City"
       },
       {
         "home": {
@@ -238,7 +249,8 @@
         "penalties": null,
         "status": "final",
         "winner": "home",
-        "date": "2026-07-01T16:00:00Z"
+        "date": "2026-07-01T16:00:00Z",
+        "city": "Atlanta"
       },
       {
         "home": {
@@ -260,7 +272,8 @@
         "probabilities": {
           "home": 93,
           "away": 7
-        }
+        },
+        "city": "Miami"
       },
       {
         "home": {
@@ -282,7 +295,8 @@
         "probabilities": {
           "home": 50,
           "away": 50
-        }
+        },
+        "city": "Dallas"
       },
       {
         "home": {
@@ -304,7 +318,8 @@
         "probabilities": {
           "home": 66,
           "away": 34
-        }
+        },
+        "city": "Vancouver"
       },
       {
         "home": {
@@ -326,7 +341,8 @@
         "probabilities": {
           "home": 77,
           "away": 23
-        }
+        },
+        "city": "Kansas City"
       }
     ],
     [
@@ -350,7 +366,8 @@
         "probabilities": {
           "home": 11,
           "away": 89
-        }
+        },
+        "city": "Philadelphia"
       },
       {
         "home": {
@@ -372,7 +389,8 @@
         "probabilities": {
           "home": 41,
           "away": 59
-        }
+        },
+        "city": "Houston"
       },
       {
         "home": null,
@@ -384,7 +402,8 @@
         "penalties": null,
         "status": "scheduled",
         "winner": null,
-        "date": "2026-07-06T19:00:00Z"
+        "date": "2026-07-06T19:00:00Z",
+        "city": "Dallas"
       },
       {
         "home": null,
@@ -396,7 +415,8 @@
         "penalties": null,
         "status": "scheduled",
         "winner": null,
-        "date": "2026-07-07T00:00:00Z"
+        "date": "2026-07-07T00:00:00Z",
+        "city": "Seattle"
       },
       {
         "home": {
@@ -418,7 +438,8 @@
         "probabilities": {
           "home": 80,
           "away": 20
-        }
+        },
+        "city": "New York/New Jersey"
       },
       {
         "home": null,
@@ -430,7 +451,8 @@
         "penalties": null,
         "status": "scheduled",
         "winner": null,
-        "date": "2026-07-06T00:00:00Z"
+        "date": "2026-07-06T00:00:00Z",
+        "city": "Mexico City"
       },
       {
         "home": null,
@@ -442,7 +464,8 @@
         "penalties": null,
         "status": "scheduled",
         "winner": null,
-        "date": "2026-07-07T16:00:00Z"
+        "date": "2026-07-07T16:00:00Z",
+        "city": "Atlanta"
       },
       {
         "home": null,
@@ -454,7 +477,8 @@
         "penalties": null,
         "status": "scheduled",
         "winner": null,
-        "date": "2026-07-07T20:00:00Z"
+        "date": "2026-07-07T20:00:00Z",
+        "city": "Vancouver"
       }
     ],
     [
@@ -468,7 +492,8 @@
         "penalties": null,
         "status": "scheduled",
         "winner": null,
-        "date": "2026-07-09T20:00:00Z"
+        "date": "2026-07-09T20:00:00Z",
+        "city": "Los Angeles"
       },
       {
         "home": null,
@@ -480,7 +505,8 @@
         "penalties": null,
         "status": "scheduled",
         "winner": null,
-        "date": "2026-07-10T19:00:00Z"
+        "date": "2026-07-10T19:00:00Z",
+        "city": "Kansas City"
       },
       {
         "home": null,
@@ -492,7 +518,8 @@
         "penalties": null,
         "status": "scheduled",
         "winner": null,
-        "date": "2026-07-11T21:00:00Z"
+        "date": "2026-07-11T21:00:00Z",
+        "city": "Boston"
       },
       {
         "home": null,
@@ -504,7 +531,8 @@
         "penalties": null,
         "status": "scheduled",
         "winner": null,
-        "date": "2026-07-12T01:00:00Z"
+        "date": "2026-07-12T01:00:00Z",
+        "city": "Miami"
       }
     ],
     [
@@ -518,7 +546,8 @@
         "penalties": null,
         "status": "scheduled",
         "winner": null,
-        "date": "2026-07-14T19:00:00Z"
+        "date": "2026-07-14T19:00:00Z",
+        "city": "Dallas"
       },
       {
         "home": null,
@@ -530,7 +559,8 @@
         "penalties": null,
         "status": "scheduled",
         "winner": null,
-        "date": "2026-07-15T19:00:00Z"
+        "date": "2026-07-15T19:00:00Z",
+        "city": "Atlanta"
       }
     ],
     [
@@ -544,7 +574,8 @@
         "penalties": null,
         "status": "scheduled",
         "winner": null,
-        "date": "2026-07-19T19:00:00Z"
+        "date": "2026-07-19T19:00:00Z",
+        "city": "New York/New Jersey"
       }
     ]
   ]

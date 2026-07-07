@@ -33,6 +33,7 @@
       close:"Fermer", noStats:"Statistiques pas encore disponibles.", statsUpdated:"Mis à jour",
       themeSwitchToDark:"Passer au thème sombre", themeSwitchToLight:"Passer au thème clair",
       dIn:"dans", jShort:"j", hShort:"h", minShort:"min",
+      city:"Ville",
       probabilityNote:"Pourcentages = estimation de victoire calculée avec une note pondérée (Elo 60 %, classement FIFA 25 %, forme récente 15 %), puis limitée entre 5 % et 95 %.",
     },
     en: {
@@ -60,6 +61,7 @@
       close:"Close", noStats:"Stats not available yet.", statsUpdated:"Updated",
       themeSwitchToDark:"Switch to dark theme", themeSwitchToLight:"Switch to light theme",
       dIn:"in", jShort:"d", hShort:"h", minShort:"m",
+      city:"City",
       probabilityNote:"Percentages are win estimates based on a weighted rating (Elo 60%, FIFA ranking 25%, recent form 15%), then capped between 5% and 95%.",
     },
     es: {
@@ -87,6 +89,7 @@
       close:"Cerrar", noStats:"Estadísticas aún no disponibles.", statsUpdated:"Actualizado",
       themeSwitchToDark:"Cambiar al tema oscuro", themeSwitchToLight:"Cambiar al tema claro",
       dIn:"en", jShort:"d", hShort:"h", minShort:"min",
+      city:"Ciudad",
       probabilityNote:"Los porcentajes son estimaciones de victoria basadas en una valoración ponderada (Elo 60 %, ranking FIFA 25 %, forma reciente 15 %) y limitadas entre 5 % y 95 %.",
     },
   };
@@ -767,6 +770,11 @@
     if(localDate) return localDate;
     return t("tbd");
   }
+  function escapeHTML(value){
+    return String(value).replace(/[&<>"']/g, (ch) => ({
+      "&":"&amp;", "<":"&lt;", ">":"&gt;", "\"":"&quot;", "'":"&#39;"
+    })[ch]);
+  }
   function showTooltip(e, m){
     const homeName = m.home && m.home.name ? m.home.name : t("tbd");
     const awayName = m.away && m.away.name ? m.away.name : t("tbd");
@@ -780,7 +788,8 @@
     if(m.probabilities && m.probabilities.home != null && m.probabilities.away != null){
       probabilityLine = `<div class="tt-meta">${m.probabilities.home}% – ${m.probabilities.away}% (${t("estimate")})</div>`;
     }
-    tooltip.innerHTML = `<div class="tt-teams">${homeName} vs ${awayName}</div>${scoreLine}${probabilityLine}<div class="tt-meta">${fmtStatus(m)}</div>`;
+    const cityLine = m.city ? `<div class="tt-meta">${escapeHTML(t("city"))}: ${escapeHTML(m.city)}</div>` : "";
+    tooltip.innerHTML = `<div class="tt-teams">${escapeHTML(homeName)} vs ${escapeHTML(awayName)}</div>${scoreLine}${probabilityLine}${cityLine}<div class="tt-meta">${escapeHTML(fmtStatus(m))}</div>`;
     tooltip.classList.add("show");
     moveTooltip(e);
   }
